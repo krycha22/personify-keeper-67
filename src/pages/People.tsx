@@ -4,12 +4,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from "@/components/ui/button";
 import { usePeople } from '@/context/PeopleContext';
+import { useAuth } from '@/context/AuthContext';
 import PersonCard from '@/components/people/PersonCard';
 import SearchBar from '@/components/people/SearchBar';
 import { UserPlus, Users } from 'lucide-react';
 
 const People = () => {
   const { people, searchPeople, deletePerson } = usePeople();
+  const { isAuthenticated, isAdmin, isPersonHidden } = useAuth();
   const [searchResults, setSearchResults] = useState(people);
   const location = useLocation();
   const navigate = useNavigate();
@@ -31,13 +33,28 @@ const People = () => {
       navigate('/people', { replace: true });
     }
     
-    // Filter people based on search query
-    setSearchResults(searchPeople(query));
+    // Filter people based on search query and visibility permissions
+    const filteredByQuery = searchPeople(query);
+    
+    // For non-admin users, filter out hidden people
+    if (!isAdmin) {
+      const visiblePeople = filteredByQuery.filter(person => !isPersonHidden(person.id));
+      setSearchResults(visiblePeople);
+    } else {
+      setSearchResults(filteredByQuery);
+    }
   };
 
   const handleDelete = (id: string) => {
     deletePerson(id);
   };
+
+  // If not authenticated, redirect to login
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate]);
 
   return (
     <Layout>

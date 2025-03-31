@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useFieldRequirements } from '@/context/FieldRequirementsContext';
-import { usePeople, defaultPhotoAlbums } from '@/context/PeopleContext';
+import { usePeople } from '@/context/PeopleContext';
 import CustomFieldForm from '@/components/settings/CustomFieldForm';
 import CustomFieldsList from '@/components/settings/CustomFieldsList';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -322,7 +321,6 @@ const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* Default Photo Albums and Relationship Types combined in a grid side by side */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>

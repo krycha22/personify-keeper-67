@@ -1,14 +1,14 @@
 
 import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CustomField } from "@/context/PeopleContext";
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { CustomField } from '@/context/PeopleContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { PlusCircle, X } from "lucide-react";
+import { PlusCircle } from 'lucide-react';
 
 interface CustomFieldFormProps {
   onAddField: (field: Omit<CustomField, 'id'>) => void;
@@ -16,138 +16,79 @@ interface CustomFieldFormProps {
 
 const CustomFieldForm: React.FC<CustomFieldFormProps> = ({ onAddField }) => {
   const { t } = useLanguage();
-  const [name, setName] = useState('');
-  const [type, setType] = useState<'text' | 'date' | 'checkbox' | 'select'>('text');
-  const [isRequired, setIsRequired] = useState(false);
-  const [options, setOptions] = useState<string[]>([]);
-  const [newOption, setNewOption] = useState('');
-
-  const resetForm = () => {
-    setName('');
-    setType('text');
-    setIsRequired(false);
-    setOptions([]);
-    setNewOption('');
-  };
+  const [fieldName, setFieldName] = useState('');
+  const [fieldType, setFieldType] = useState<'text' | 'number' | 'date' | 'boolean'>('text');
+  const [required, setRequired] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-
+    
+    if (!fieldName.trim()) return;
+    
     onAddField({
-      name: name.trim(),
-      type,
-      isRequired,
-      ...(type === 'select' && { options }),
+      name: fieldName.trim(),
+      type: fieldType,
+      required
     });
     
-    resetForm();
-  };
-
-  const addOption = () => {
-    if (newOption.trim() && !options.includes(newOption.trim())) {
-      setOptions([...options, newOption.trim()]);
-      setNewOption('');
-    }
-  };
-
-  const removeOption = (option: string) => {
-    setOptions(options.filter(o => o !== option));
+    // Reset form
+    setFieldName('');
+    setFieldType('text');
+    setRequired(false);
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('customFields.add')}</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <PlusCircle className="h-5 w-5" />
+          {t('settings.addCustomField')}
+        </CardTitle>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="field-name">{t('customFields.name')}</Label>
+            <Label htmlFor="field-name">{t('settings.fieldName')}</Label>
             <Input
               id="field-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Job Title"
-              required
+              value={fieldName}
+              onChange={(e) => setFieldName(e.target.value)}
+              placeholder={t('settings.enterFieldName')}
             />
           </div>
-
+          
           <div className="space-y-2">
-            <Label htmlFor="field-type">{t('customFields.type')}</Label>
-            <Select value={type} onValueChange={(value: any) => setType(value)}>
+            <Label htmlFor="field-type">{t('settings.fieldType')}</Label>
+            <Select 
+              value={fieldType} 
+              onValueChange={(value: 'text' | 'number' | 'date' | 'boolean') => setFieldType(value)}
+            >
               <SelectTrigger id="field-type">
-                <SelectValue placeholder={t('customFields.type')} />
+                <SelectValue placeholder={t('settings.selectFieldType')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="text">Text</SelectItem>
-                <SelectItem value="date">Date</SelectItem>
-                <SelectItem value="checkbox">Checkbox</SelectItem>
-                <SelectItem value="select">Dropdown</SelectItem>
+                <SelectItem value="text">{t('settings.fieldTypeText')}</SelectItem>
+                <SelectItem value="number">{t('settings.fieldTypeNumber')}</SelectItem>
+                <SelectItem value="date">{t('settings.fieldTypeDate')}</SelectItem>
+                <SelectItem value="boolean">{t('settings.fieldTypeBoolean')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="field-required"
-              checked={isRequired}
-              onCheckedChange={(checked) => setIsRequired(checked === true)}
+          
+          <div className="flex items-center space-x-2 pt-2">
+            <Switch 
+              id="required-field" 
+              checked={required} 
+              onCheckedChange={setRequired} 
             />
-            <Label htmlFor="field-required">{t('customFields.required')}</Label>
+            <Label htmlFor="required-field">{t('settings.requiredField')}</Label>
           </div>
-
-          {type === 'select' && (
-            <div className="space-y-4">
-              <Label>{t('customFields.options')}</Label>
-              <div className="flex space-x-2">
-                <Input
-                  value={newOption}
-                  onChange={(e) => setNewOption(e.target.value)}
-                  placeholder={t('customFields.addOption')}
-                />
-                <Button type="button" onClick={addOption} variant="outline">
-                  {t('customFields.addButton')}
-                </Button>
-              </div>
-              
-              {options.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {options.map((option, index) => (
-                    <div 
-                      key={index} 
-                      className="flex items-center bg-accent rounded-full px-3 py-1"
-                    >
-                      <span className="mr-2">{option}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 rounded-full"
-                        onClick={() => removeOption(option)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {options.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  {t('customFields.optionsMessage')}
-                </p>
-              )}
-            </div>
-          )}
-        </CardContent>
-        <CardFooter>
-          <Button type="submit" disabled={type === 'select' && options.length === 0}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            {t('customFields.addFieldButton')}
+          
+          <Button type="submit" className="w-full">
+            {t('settings.addField')}
           </Button>
-        </CardFooter>
-      </form>
+        </form>
+      </CardContent>
     </Card>
   );
 };

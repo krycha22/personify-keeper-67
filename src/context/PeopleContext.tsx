@@ -14,6 +14,7 @@ export interface Person {
   nickname?: string;
   tags?: string[];
   isHidden?: boolean;
+  photoAlbums?: PhotoAlbum[];
   [key: string]: any;
 }
 
@@ -23,6 +24,18 @@ export interface CustomField {
   type: 'text' | 'number' | 'date' | 'boolean';
   required?: boolean;
 }
+
+export interface PhotoAlbum {
+  id: string;
+  name: string;
+}
+
+export const defaultPhotoAlbums: PhotoAlbum[] = [
+  { id: '1', name: 'Family' },
+  { id: '2', name: 'Friends' },
+  { id: '3', name: 'Work' },
+  { id: '4', name: 'Vacation' }
+];
 
 interface PeopleContextType {
   people: Person[];
@@ -35,6 +48,8 @@ interface PeopleContextType {
   addCustomField: (field: Omit<CustomField, 'id'>) => void;
   deleteCustomField: (id: string) => void;
   togglePersonVisibility: (id: string) => void;
+  addDefaultAlbum: (name: string) => void;
+  getDefaultAlbums: () => PhotoAlbum[];
 }
 
 const PeopleContext = createContext<PeopleContextType | undefined>(undefined);
@@ -49,10 +64,15 @@ export const usePeople = () => {
 
 const LOCAL_STORAGE_KEY = 'personifykeeper_people';
 const CUSTOM_FIELDS_KEY = 'personifykeeper_custom_fields';
+const DEFAULT_ALBUMS_KEY = 'personifykeeper_default_albums';
 
 export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [people, setPeople] = useState<Person[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [defaultAlbums, setDefaultAlbums] = useState<PhotoAlbum[]>(() => {
+    const savedAlbums = localStorage.getItem(DEFAULT_ALBUMS_KEY);
+    return savedAlbums ? JSON.parse(savedAlbums) : defaultPhotoAlbums;
+  });
   const { isAdmin } = useAuth();
 
   useEffect(() => {
@@ -75,11 +95,17 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     localStorage.setItem(CUSTOM_FIELDS_KEY, JSON.stringify(customFields));
   }, [customFields]);
+  
+  useEffect(() => {
+    localStorage.setItem(DEFAULT_ALBUMS_KEY, JSON.stringify(defaultAlbums));
+  }, [defaultAlbums]);
 
   const addPerson = (personData: Omit<Person, 'id'>) => {
     const newPerson: Person = {
       ...personData,
       id: generateId(),
+      firstName: personData.firstName,
+      lastName: personData.lastName,
       isHidden: false
     };
     setPeople((prev) => [...prev, newPerson]);
@@ -152,6 +178,18 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const deleteCustomField = (id: string) => {
     setCustomFields((prev) => prev.filter((field) => field.id !== id));
   };
+  
+  const addDefaultAlbum = (name: string) => {
+    const newAlbum: PhotoAlbum = {
+      id: generateId(),
+      name
+    };
+    setDefaultAlbums((prev) => [...prev, newAlbum]);
+  };
+  
+  const getDefaultAlbums = () => {
+    return defaultAlbums;
+  };
 
   const generateId = () => {
     return Math.random().toString(36).substring(2, 15) + 
@@ -170,7 +208,9 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         searchPeople,
         addCustomField,
         deleteCustomField,
-        togglePersonVisibility
+        togglePersonVisibility,
+        addDefaultAlbum,
+        getDefaultAlbums
       }}
     >
       {children}

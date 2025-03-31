@@ -9,7 +9,111 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      custom_fields: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          options: Json | null
+          required: boolean | null
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          options?: Json | null
+          required?: boolean | null
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          options?: Json | null
+          required?: boolean | null
+          type?: string
+        }
+        Relationships: []
+      }
+      default_photo_albums: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      people: {
+        Row: {
+          address: string | null
+          birth_date: string | null
+          created_at: string | null
+          custom_fields: Json | null
+          email: string | null
+          first_name: string
+          id: string
+          is_hidden: boolean | null
+          last_name: string
+          nickname: string | null
+          notes: string | null
+          phone: string | null
+          photo: string | null
+          photo_albums: Json | null
+          relationships: Json | null
+          tags: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          birth_date?: string | null
+          created_at?: string | null
+          custom_fields?: Json | null
+          email?: string | null
+          first_name: string
+          id?: string
+          is_hidden?: boolean | null
+          last_name: string
+          nickname?: string | null
+          notes?: string | null
+          phone?: string | null
+          photo?: string | null
+          photo_albums?: Json | null
+          relationships?: Json | null
+          tags?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          birth_date?: string | null
+          created_at?: string | null
+          custom_fields?: Json | null
+          email?: string | null
+          first_name?: string
+          id?: string
+          is_hidden?: boolean | null
+          last_name?: string
+          nickname?: string | null
+          notes?: string | null
+          phone?: string | null
+          photo?: string | null
+          photo_albums?: Json | null
+          relationships?: Json | null
+          tags?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

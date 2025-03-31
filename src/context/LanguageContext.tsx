@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type Language = 'en' | 'pl';
@@ -110,6 +111,46 @@ const translations: Translations = {
   'person.addPhotoToGallery': {
     en: 'Add Photo to Gallery',
     pl: 'Dodaj zdjęcie do galerii',
+  },
+  'person.addPhotoToAlbum': {
+    en: 'Add Photo to Album',
+    pl: 'Dodaj zdjęcie do albumu',
+  },
+  'person.newAlbum': {
+    en: 'New Album',
+    pl: 'Nowy Album',
+  },
+  'person.createNewAlbum': {
+    en: 'Create New Album',
+    pl: 'Utwórz nowy album',
+  },
+  'person.albumName': {
+    en: 'Album Name',
+    pl: 'Nazwa albumu',
+  },
+  'person.enterAlbumName': {
+    en: 'Enter album name',
+    pl: 'Wprowadź nazwę albumu',
+  },
+  'person.createAlbum': {
+    en: 'Create Album',
+    pl: 'Utwórz album',
+  },
+  'person.renameAlbum': {
+    en: 'Rename Album',
+    pl: 'Zmień nazwę albumu',
+  },
+  'person.newAlbumName': {
+    en: 'New Album Name',
+    pl: 'Nowa nazwa albumu',
+  },
+  'person.enterNewAlbumName': {
+    en: 'Enter new album name',
+    pl: 'Wprowadź nową nazwę albumu',
+  },
+  'person.saveAlbumName': {
+    en: 'Save Album Name',
+    pl: 'Zapisz nazwę albumu',
   },
   'person.delete': {
     en: 'Delete',

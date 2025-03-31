@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -6,12 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { usePeople, Person } from '@/context/PeopleContext';
+import { usePeople, Person, PhotoAlbum } from '@/context/PeopleContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useFieldRequirements } from '@/context/FieldRequirementsContext';
 import CustomFieldInput from '@/components/people/CustomFieldInput';
 import ImageUpload from '@/components/people/ImageUpload';
 import { SaveIcon, ArrowLeft } from 'lucide-react';
+
+const defaultPhotoAlbums: PhotoAlbum[] = [
+  { id: "album-me", name: "Me", photos: [] },
+  { id: "album-general", name: "General", photos: [] },
+  { id: "album-friends", name: "Friends", photos: [] },
+];
 
 const PersonForm = () => {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +40,8 @@ const PersonForm = () => {
     birthDate: '',
     photo: undefined,
     photos: [],
+    photoDetails: [],
+    photoAlbums: JSON.parse(JSON.stringify(defaultPhotoAlbums)),
     notes: '',
     customFields: {},
     relationships: []
@@ -50,6 +59,8 @@ const PersonForm = () => {
         birthDate: existingPerson.birthDate || '',
         photo: existingPerson.photo,
         photos: existingPerson.photos || [],
+        photoDetails: existingPerson.photoDetails || [],
+        photoAlbums: existingPerson.photoAlbums || JSON.parse(JSON.stringify(defaultPhotoAlbums)),
         notes: existingPerson.notes || '',
         customFields: existingPerson.customFields,
         relationships: existingPerson.relationships
@@ -76,10 +87,36 @@ const PersonForm = () => {
   };
 
   const handleImageChange = (imageBase64: string | undefined) => {
-    setFormData(prev => ({
-      ...prev,
-      photo: imageBase64
-    }));
+    setFormData(prev => {
+      // If there's an image being set
+      if (imageBase64) {
+        // Update "Me" album
+        const updatedAlbums = prev.photoAlbums.map(album => {
+          if (album.id === 'album-me') {
+            // Add this image to the "Me" album if it's empty
+            if (album.photos.length === 0) {
+              return {
+                ...album,
+                photos: [{ url: imageBase64, description: '' }]
+              };
+            }
+          }
+          return album;
+        });
+        
+        return {
+          ...prev,
+          photo: imageBase64,
+          photoAlbums: updatedAlbums
+        };
+      } else {
+        // If removing image
+        return {
+          ...prev,
+          photo: undefined
+        };
+      }
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -253,23 +290,23 @@ const PersonForm = () => {
                   <Textarea
                     id="notes"
                     name="notes"
-                    rows={4}
                     value={formData.notes}
                     onChange={handleChange}
+                    rows={3}
                   />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Custom fields card */}
+            {/* Custom Fields */}
             {customFields.length > 0 && (
               <Card className="md:col-span-3">
                 <CardHeader>
                   <CardTitle>{t('fields.additionalInfo')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {customFields.map(field => (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {customFields.map((field) => (
                       <CustomFieldInput
                         key={field.id}
                         field={field}
@@ -281,13 +318,13 @@ const PersonForm = () => {
                 </CardContent>
               </Card>
             )}
-          </div>
 
-          <div className="mt-6 flex justify-end">
-            <Button type="submit" size="lg">
-              <SaveIcon className="mr-2 h-4 w-4" />
-              {isEditMode ? t('person.updateButton') : t('person.saveButton')}
-            </Button>
+            <div className="md:col-span-3">
+              <Button type="submit" className="w-full">
+                <SaveIcon className="mr-2 h-4 w-4" />
+                {isEditMode ? t('person.updateButton') : t('person.saveButton')}
+              </Button>
+            </div>
           </div>
         </form>
       </div>

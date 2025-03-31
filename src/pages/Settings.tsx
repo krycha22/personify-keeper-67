@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/components/ui/use-toast";
 import { MoonIcon, SunIcon, Trash2, Download, Globe, Users, Plus, X, GalleryHorizontal, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
@@ -320,104 +322,107 @@ const Settings = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <GalleryHorizontal className="h-5 w-5" />
-              {t('settings.defaultPhotoAlbums')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground mb-2">
-              {t('settings.defaultPhotoAlbumsDescription')}
-            </p>
-            
-            <div className="flex flex-wrap gap-2 mb-4">
-              {getDefaultAlbums().map(album => (
-                <Badge key={album.id} variant="outline" className="flex items-center gap-1 px-3 py-1.5">
-                  {album.name}
-                </Badge>
-              ))}
-            </div>
-            
-            <Dialog open={isNewDefaultAlbumOpen} onOpenChange={setIsNewDefaultAlbumOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('settings.addDefaultAlbum')}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t('settings.addNewDefaultAlbum')}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <label htmlFor="default-album-name" className="text-sm font-medium">
-                      {t('settings.albumName')}
-                    </label>
-                    <Input
-                      id="default-album-name"
-                      value={newDefaultAlbumName}
-                      onChange={(e) => setNewDefaultAlbumName(e.target.value)}
-                      placeholder={t('settings.enterAlbumName')}
-                    />
+        {/* Default Photo Albums and Relationship Types combined in a grid side by side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GalleryHorizontal className="h-5 w-5" />
+                {t('settings.defaultPhotoAlbums')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground mb-2">
+                {t('settings.defaultPhotoAlbumsDescription')}
+              </p>
+              
+              <div className="flex flex-wrap gap-2 mb-4">
+                {getDefaultAlbums().map(album => (
+                  <Badge key={album.id} variant="outline" className="flex items-center gap-1 px-3 py-1.5">
+                    {album.name}
+                  </Badge>
+                ))}
+              </div>
+              
+              <Dialog open={isNewDefaultAlbumOpen} onOpenChange={setIsNewDefaultAlbumOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('settings.addDefaultAlbum')}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{t('settings.addNewDefaultAlbum')}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <label htmlFor="default-album-name" className="text-sm font-medium">
+                        {t('settings.albumName')}
+                      </label>
+                      <Input
+                        id="default-album-name"
+                        value={newDefaultAlbumName}
+                        onChange={(e) => setNewDefaultAlbumName(e.target.value)}
+                        placeholder={t('settings.enterAlbumName')}
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleAddDefaultAlbum}
+                      disabled={!newDefaultAlbumName.trim()}
+                      className="w-full"
+                    >
+                      {t('settings.createAlbum')}
+                    </Button>
                   </div>
-                  <Button 
-                    onClick={handleAddDefaultAlbum}
-                    disabled={!newDefaultAlbumName.trim()}
-                    className="w-full"
-                  >
-                    {t('settings.createAlbum')}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </CardContent>
-        </Card>
+                </DialogContent>
+              </Dialog>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              {t('settings.relationshipTypes')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground mb-2">
-              {t('settings.relationshipTypesDescription')}
-            </p>
-            
-            <div className="flex flex-wrap gap-2 mb-4">
-              {relationshipTypes.map(type => (
-                <Badge key={type} variant="outline" className="flex items-center gap-1 px-3 py-1.5">
-                  {type}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 rounded-full ml-1"
-                    onClick={() => handleRemoveRelationshipType(type)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              ))}
-            </div>
-            
-            <div className="flex gap-2">
-              <Input
-                placeholder={t('settings.newRelationshipType')}
-                value={customRelationshipType}
-                onChange={(e) => setCustomRelationshipType(e.target.value)}
-                className="flex-1"
-              />
-              <Button onClick={handleAddRelationshipType}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t('settings.add')}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                {t('settings.relationshipTypes')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground mb-2">
+                {t('settings.relationshipTypesDescription')}
+              </p>
+              
+              <div className="flex flex-wrap gap-2 mb-4">
+                {relationshipTypes.map(type => (
+                  <Badge key={type} variant="outline" className="flex items-center gap-1 px-3 py-1.5">
+                    {type}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-4 w-4 rounded-full ml-1"
+                      onClick={() => handleRemoveRelationshipType(type)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+              
+              <div className="flex gap-2">
+                <Input
+                  placeholder={t('settings.newRelationshipType')}
+                  value={customRelationshipType}
+                  onChange={(e) => setCustomRelationshipType(e.target.value)}
+                  className="flex-1"
+                />
+                <Button onClick={handleAddRelationshipType}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('settings.add')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="grid grid-cols-1 gap-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -9,11 +9,12 @@ import { useLanguage } from '@/context/LanguageContext';
 import RelationshipManager from '@/components/people/RelationshipManager';
 import PhotoGallery from '@/components/people/PhotoGallery';
 import { ArrowLeft, Edit, Mail, MapPin, Phone, Calendar, FileText, User } from 'lucide-react';
+import VisibilityControl from '@/components/people/VisibilityControl';
 
 const PersonView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getPerson } = usePeople();
+  const { getPerson, togglePersonVisibility } = usePeople();
   const { t } = useLanguage();
   
   const person = id ? getPerson(id) : undefined;
@@ -45,6 +46,15 @@ const PersonView = () => {
     return date.toLocaleDateString();
   };
 
+  // Format address for display
+  const formatAddress = () => {
+    if (!person.address) return '';
+    
+    const { street, city, state, zip, country } = person.address;
+    const parts = [street, city, state, zip, country].filter(Boolean);
+    return parts.join(', ');
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -57,6 +67,11 @@ const PersonView = () => {
             <p className="text-muted-foreground">{t('person.profileInformation')}</p>
           </div>
           <div className="flex space-x-2">
+            <VisibilityControl
+              personId={person.id}
+              isHidden={!!person.isHidden}
+              onToggleVisibility={togglePersonVisibility}
+            />
             <Button variant="outline" onClick={() => navigate(-1)}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               {t('person.backButton')}
@@ -128,7 +143,7 @@ const PersonView = () => {
                       <p className="font-medium text-sm text-muted-foreground">
                         {t('fields.address')}
                       </p>
-                      <p>{person.address}</p>
+                      <p>{formatAddress()}</p>
                     </div>
                   </div>
                 )}
@@ -154,9 +169,9 @@ const PersonView = () => {
               <CardTitle>{t('fields.additionalInfo')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(person.customFields).length > 0 ? (
+              {Object.entries(person.customFields || {}).length > 0 ? (
                 <div className="space-y-4">
-                  {Object.entries(person.customFields).map(([fieldId, value]) => {
+                  {Object.entries(person.customFields || {}).map(([fieldId, value]) => {
                     const field = usePeople().customFields.find(f => f.id === fieldId);
                     if (!field || value === undefined || value === '') return null;
                     
@@ -168,8 +183,8 @@ const PersonView = () => {
                             {field.name}
                           </p>
                           <p>
-                            {field.type === 'checkbox' 
-                              ? (value ? t('common.yes') : t('common.no'))
+                            {field.type === 'boolean' 
+                              ? (value === 'true' ? t('common.yes') : t('common.no'))
                               : String(value)
                             }
                           </p>
@@ -201,11 +216,6 @@ const PersonView = () => {
           {/* Right column - Relationships */}
           <Card>
             <RelationshipManager person={person} />
-          </Card>
-          
-          {/* Photo Gallery - Spans all columns */}
-          <Card className="md:col-span-3">
-            <PhotoGallery person={person} />
           </Card>
         </div>
       </div>

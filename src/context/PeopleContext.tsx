@@ -21,14 +21,14 @@ export type Person = {
     country?: string;
   };
   tags?: string[];
-  customFields?: Record<string, string>;
-  relationships?: Array<{
+  customFields: Record<string, string>;
+  relationships: Array<{
     id: string;
-    personId: string;
-    relationshipType: string;
+    relatedPersonId: string;
+    type: string;
   }>;
   photos?: string[];
-  isHidden?: boolean; // Nowe pole do ukrywania profili
+  isHidden?: boolean; // Pole do ukrywania profili
 };
 
 export type CustomField = {
@@ -48,7 +48,9 @@ interface PeopleContextType {
   searchPeople: (query: string) => Person[];
   addCustomField: (field: Omit<CustomField, 'id'>) => void;
   deleteCustomField: (id: string) => void;
-  togglePersonVisibility: (id: string) => void; // Nowa funkcja
+  togglePersonVisibility: (id: string) => void;
+  addRelationship: (personId: string, relatedPersonId: string, type: string) => void;
+  removeRelationship: (personId: string, relatedPersonId: string) => void;
 }
 
 const PeopleContext = createContext<PeopleContextType | undefined>(undefined);
@@ -162,6 +164,52 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCustomFields((prev) => prev.filter((field) => field.id !== id));
   };
 
+  // Dodajemy funkcje do obsługi relacji
+  const addRelationship = (personId: string, relatedPersonId: string, type: string) => {
+    setPeople((prev) =>
+      prev.map((person) => {
+        if (person.id === personId) {
+          const existingRelationship = person.relationships.find(
+            (r) => r.relatedPersonId === relatedPersonId
+          );
+          
+          if (existingRelationship) {
+            return person;
+          }
+          
+          return {
+            ...person,
+            relationships: [
+              ...person.relationships,
+              { 
+                id: uuidv4(),
+                relatedPersonId,
+                type
+              }
+            ]
+          };
+        }
+        return person;
+      })
+    );
+  };
+
+  const removeRelationship = (personId: string, relatedPersonId: string) => {
+    setPeople((prev) =>
+      prev.map((person) => {
+        if (person.id === personId) {
+          return {
+            ...person,
+            relationships: person.relationships.filter(
+              (r) => r.relatedPersonId !== relatedPersonId
+            )
+          };
+        }
+        return person;
+      })
+    );
+  };
+
   return (
     <PeopleContext.Provider
       value={{
@@ -175,6 +223,8 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addCustomField,
         deleteCustomField,
         togglePersonVisibility,
+        addRelationship,
+        removeRelationship
       }}
     >
       {children}

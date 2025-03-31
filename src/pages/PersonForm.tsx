@@ -7,18 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { usePeople, Person, PhotoAlbum } from '@/context/PeopleContext';
+import { usePeople, Person } from '@/context/PeopleContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useFieldRequirements } from '@/context/FieldRequirementsContext';
 import CustomFieldInput from '@/components/people/CustomFieldInput';
 import ImageUpload from '@/components/people/ImageUpload';
 import { SaveIcon, ArrowLeft } from 'lucide-react';
-
-const defaultPhotoAlbums: PhotoAlbum[] = [
-  { id: "album-me", name: "Me", photos: [] },
-  { id: "album-general", name: "General", photos: [] },
-  { id: "album-friends", name: "Friends", photos: [] },
-];
 
 const PersonForm = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,18 +24,22 @@ const PersonForm = () => {
   const isEditMode = !!id;
   const existingPerson = isEditMode ? getPerson(id) : undefined;
   
-  const [formData, setFormData] = useState<Omit<Person, 'id' | 'createdAt' | 'updatedAt'>>({
+  const [formData, setFormData] = useState<Omit<Person, 'id'>>({
     firstName: '',
     lastName: '',
     nickname: '',
     email: '',
     phone: '',
-    address: '',
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      zip: '',
+      country: ''
+    },
     birthDate: '',
     photo: undefined,
     photos: [],
-    photoDetails: [],
-    photoAlbums: JSON.parse(JSON.stringify(defaultPhotoAlbums)),
     notes: '',
     customFields: {},
     relationships: []
@@ -55,25 +53,42 @@ const PersonForm = () => {
         nickname: existingPerson.nickname || '',
         email: existingPerson.email,
         phone: existingPerson.phone || '',
-        address: existingPerson.address || '',
+        address: existingPerson.address || {
+          street: '',
+          city: '',
+          state: '',
+          zip: '',
+          country: ''
+        },
         birthDate: existingPerson.birthDate || '',
         photo: existingPerson.photo,
         photos: existingPerson.photos || [],
-        photoDetails: existingPerson.photoDetails || [],
-        photoAlbums: existingPerson.photoAlbums || JSON.parse(JSON.stringify(defaultPhotoAlbums)),
         notes: existingPerson.notes || '',
-        customFields: existingPerson.customFields,
-        relationships: existingPerson.relationships
+        customFields: existingPerson.customFields || {},
+        relationships: existingPerson.relationships || []
       });
     }
   }, [isEditMode, existingPerson]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // Handle address fields
+    if (name.startsWith('address.')) {
+      const addressField = name.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        address: {
+          ...prev.address,
+          [addressField]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleCustomFieldChange = (fieldId: string, value: any) => {
@@ -87,36 +102,10 @@ const PersonForm = () => {
   };
 
   const handleImageChange = (imageBase64: string | undefined) => {
-    setFormData(prev => {
-      // If there's an image being set
-      if (imageBase64) {
-        // Update "Me" album
-        const updatedAlbums = prev.photoAlbums.map(album => {
-          if (album.id === 'album-me') {
-            // Add this image to the "Me" album if it's empty
-            if (album.photos.length === 0) {
-              return {
-                ...album,
-                photos: [{ url: imageBase64, description: '' }]
-              };
-            }
-          }
-          return album;
-        });
-        
-        return {
-          ...prev,
-          photo: imageBase64,
-          photoAlbums: updatedAlbums
-        };
-      } else {
-        // If removing image
-        return {
-          ...prev,
-          photo: undefined
-        };
-      }
-    });
+    setFormData(prev => ({
+      ...prev,
+      photo: imageBase64
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -126,8 +115,8 @@ const PersonForm = () => {
       updatePerson(id, formData);
       navigate(`/people/${id}`);
     } else {
-      const newId = addPerson(formData);
-      navigate(`/people/${newId}`);
+      const newPerson = addPerson(formData);
+      navigate(`/people/${newPerson.id}`);
     }
   };
 
@@ -257,17 +246,59 @@ const PersonForm = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="address">
-                    {t('fields.address')}
-                    {fieldRequirements.address && <span className="text-destructive">*</span>}
+                  <Label htmlFor="address.street">
+                    {t('fields.address')} {t('fields.street')}
                   </Label>
                   <Input
-                    id="address"
-                    name="address"
-                    value={formData.address}
+                    id="address.street"
+                    name="address.street"
+                    value={formData.address?.street || ''}
                     onChange={handleChange}
-                    required={fieldRequirements.address}
                   />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="address.city">{t('fields.city')}</Label>
+                    <Input
+                      id="address.city"
+                      name="address.city"
+                      value={formData.address?.city || ''}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="address.state">{t('fields.state')}</Label>
+                    <Input
+                      id="address.state"
+                      name="address.state"
+                      value={formData.address?.state || ''}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="address.zip">{t('fields.zip')}</Label>
+                    <Input
+                      id="address.zip"
+                      name="address.zip"
+                      value={formData.address?.zip || ''}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="address.country">{t('fields.country')}</Label>
+                    <Input
+                      id="address.country"
+                      name="address.country"
+                      value={formData.address?.country || ''}
+                      onChange={handleChange}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">

@@ -16,7 +16,7 @@ interface RelationshipManagerProps {
 }
 
 const RelationshipManager: React.FC<RelationshipManagerProps> = ({ person }) => {
-  const { people, addRelationship, removeRelationship } = usePeople();
+  const { people, updatePerson } = usePeople();
   const { t } = useLanguage();
   const [relatedPersonId, setRelatedPersonId] = useState('');
   const [relationshipType, setRelationshipType] = useState('');
@@ -48,6 +48,45 @@ const RelationshipManager: React.FC<RelationshipManagerProps> = ({ person }) => 
 
   const getRelatedPerson = (id: string) => {
     return people.find(p => p.id === id);
+  };
+
+  // Implement addRelationship and removeRelationship directly in this component
+  const addRelationship = (personId: string, relatedPersonId: string, type: string) => {
+    // First, get the current person
+    const currentPerson = people.find(p => p.id === personId);
+    if (!currentPerson) return;
+    
+    // Check if relationship already exists
+    const existingRelationship = currentPerson.relationships.find(
+      r => r.relatedPersonId === relatedPersonId
+    );
+    
+    if (existingRelationship) return;
+    
+    // Create new relationship
+    const newRelationship = {
+      id: Math.random().toString(36).substr(2, 9), // Simple ID generation
+      relatedPersonId,
+      type
+    };
+    
+    // Update the person with the new relationship
+    const updatedRelationships = [...currentPerson.relationships, newRelationship];
+    updatePerson(personId, { relationships: updatedRelationships });
+  };
+
+  const removeRelationship = (personId: string, relatedPersonId: string) => {
+    // Get the current person
+    const currentPerson = people.find(p => p.id === personId);
+    if (!currentPerson) return;
+    
+    // Filter out the relationship to remove
+    const updatedRelationships = currentPerson.relationships.filter(
+      r => r.relatedPersonId !== relatedPersonId
+    );
+    
+    // Update the person with the filtered relationships
+    updatePerson(personId, { relationships: updatedRelationships });
   };
 
   const handleAddRelationship = () => {

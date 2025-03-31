@@ -17,15 +17,15 @@ interface CustomFieldFormProps {
 const CustomFieldForm: React.FC<CustomFieldFormProps> = ({ onAddField }) => {
   const { t } = useLanguage();
   const [name, setName] = useState('');
-  const [type, setType] = useState<'text' | 'date' | 'checkbox' | 'select'>('text');
-  const [isRequired, setIsRequired] = useState(false);
+  const [type, setType] = useState<'text' | 'date' | 'number' | 'boolean' | 'checkbox' | 'select'>('text');
+  const [required, setRequired] = useState(false);
   const [options, setOptions] = useState<string[]>([]);
   const [newOption, setNewOption] = useState('');
 
   const resetForm = () => {
     setName('');
     setType('text');
-    setIsRequired(false);
+    setRequired(false);
     setOptions([]);
     setNewOption('');
   };
@@ -37,7 +37,7 @@ const CustomFieldForm: React.FC<CustomFieldFormProps> = ({ onAddField }) => {
     onAddField({
       name: name.trim(),
       type,
-      isRequired,
+      required,
       ...(type === 'select' && { options }),
     });
     
@@ -82,6 +82,8 @@ const CustomFieldForm: React.FC<CustomFieldFormProps> = ({ onAddField }) => {
               <SelectContent>
                 <SelectItem value="text">Text</SelectItem>
                 <SelectItem value="date">Date</SelectItem>
+                <SelectItem value="number">Number</SelectItem>
+                <SelectItem value="boolean">Yes/No</SelectItem>
                 <SelectItem value="checkbox">Checkbox</SelectItem>
                 <SelectItem value="select">Dropdown</SelectItem>
               </SelectContent>
@@ -91,8 +93,8 @@ const CustomFieldForm: React.FC<CustomFieldFormProps> = ({ onAddField }) => {
           <div className="flex items-center space-x-2">
             <Checkbox
               id="field-required"
-              checked={isRequired}
-              onCheckedChange={(checked) => setIsRequired(checked === true)}
+              checked={required}
+              onCheckedChange={(checked) => setRequired(checked === true)}
             />
             <Label htmlFor="field-required">{t('customFields.required')}</Label>
           </div>

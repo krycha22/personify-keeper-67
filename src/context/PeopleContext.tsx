@@ -28,14 +28,29 @@ export type Person = {
     type: string;
   }>;
   photos?: string[];
-  isHidden?: boolean; // Pole do ukrywania profili
+  photoAlbums?: PhotoAlbum[];
+  photoDetails?: PhotoDetail[];
+  isHidden?: boolean;
+};
+
+export type PhotoDetail = {
+  url: string;
+  description?: string;
+};
+
+export type PhotoAlbum = {
+  id: string;
+  name: string;
+  photos: PhotoDetail[];
 };
 
 export type CustomField = {
   id: string;
   name: string;
-  type: 'text' | 'date' | 'number' | 'boolean';
+  type: 'text' | 'date' | 'number' | 'boolean' | 'checkbox' | 'select';
   required: boolean;
+  isRequired?: boolean; // For backward compatibility
+  options?: string[]; // For select type
 };
 
 interface PeopleContextType {
@@ -51,6 +66,13 @@ interface PeopleContextType {
   togglePersonVisibility: (id: string) => void;
   addRelationship: (personId: string, relatedPersonId: string, type: string) => void;
   removeRelationship: (personId: string, relatedPersonId: string) => void;
+  // Photo gallery functions
+  addPhotoToGallery: (personId: string, photoUrl: string, description: string, albumId?: string) => void;
+  removePhotoFromGallery: (personId: string, index: number, albumId?: string) => void;
+  updatePhotoDescription: (personId: string, index: number, description: string, albumId?: string) => void;
+  addPhotoAlbum: (personId: string, name: string) => string;
+  removePhotoAlbum: (personId: string, albumId: string) => void;
+  renamePhotoAlbum: (personId: string, albumId: string, newName: string) => void;
 }
 
 const PeopleContext = createContext<PeopleContextType | undefined>(undefined);
@@ -164,7 +186,7 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCustomFields((prev) => prev.filter((field) => field.id !== id));
   };
 
-  // Dodajemy funkcje do obsługi relacji
+  // Functions for handling relationships
   const addRelationship = (personId: string, relatedPersonId: string, type: string) => {
     setPeople((prev) =>
       prev.map((person) => {
@@ -210,6 +232,164 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     );
   };
 
+  // Photo gallery functions
+  const addPhotoToGallery = (personId: string, photoUrl: string, description: string, albumId?: string) => {
+    setPeople((prev) =>
+      prev.map((person) => {
+        if (person.id === personId) {
+          if (albumId) {
+            // Add to specific album
+            const photoAlbums = person.photoAlbums || [];
+            const updatedAlbums = photoAlbums.map((album) => {
+              if (album.id === albumId) {
+                return {
+                  ...album,
+                  photos: [...album.photos, { url: photoUrl, description }]
+                };
+              }
+              return album;
+            });
+            
+            return {
+              ...person,
+              photoAlbums: updatedAlbums
+            };
+          } else {
+            // Add to general photos
+            const photoDetails = person.photoDetails || [];
+            return {
+              ...person,
+              photos: [...(person.photos || []), photoUrl],
+              photoDetails: [...photoDetails, { url: photoUrl, description }]
+            };
+          }
+        }
+        return person;
+      })
+    );
+  };
+  
+  const removePhotoFromGallery = (personId: string, index: number, albumId?: string) => {
+    setPeople((prev) =>
+      prev.map((person) => {
+        if (person.id === personId) {
+          if (albumId) {
+            // Remove from specific album
+            const photoAlbums = person.photoAlbums || [];
+            const updatedAlbums = photoAlbums.map((album) => {
+              if (album.id === albumId) {
+                const updatedPhotos = [...album.photos];
+                updatedPhotos.splice(index, 1);
+                return { ...album, photos: updatedPhotos };
+              }
+              return album;
+            });
+            
+            return { ...person, photoAlbums: updatedAlbums };
+          } else {
+            // Remove from general photos
+            const updatedPhotos = [...(person.photos || [])];
+            const updatedPhotoDetails = [...(person.photoDetails || [])];
+            updatedPhotos.splice(index, 1);
+            updatedPhotoDetails.splice(index, 1);
+            
+            return { 
+              ...person, 
+              photos: updatedPhotos,
+              photoDetails: updatedPhotoDetails
+            };
+          }
+        }
+        return person;
+      })
+    );
+  };
+  
+  const updatePhotoDescription = (personId: string, index: number, description: string, albumId?: string) => {
+    setPeople((prev) =>
+      prev.map((person) => {
+        if (person.id === personId) {
+          if (albumId) {
+            // Update in specific album
+            const photoAlbums = person.photoAlbums || [];
+            const updatedAlbums = photoAlbums.map((album) => {
+              if (album.id === albumId && album.photos[index]) {
+                const updatedPhotos = [...album.photos];
+                updatedPhotos[index] = { ...updatedPhotos[index], description };
+                return { ...album, photos: updatedPhotos };
+              }
+              return album;
+            });
+            
+            return { ...person, photoAlbums: updatedAlbums };
+          } else {
+            // Update in general photos
+            const updatedPhotoDetails = [...(person.photoDetails || [])];
+            if (updatedPhotoDetails[index]) {
+              updatedPhotoDetails[index] = { ...updatedPhotoDetails[index], description };
+            }
+            
+            return { ...person, photoDetails: updatedPhotoDetails };
+          }
+        }
+        return person;
+      })
+    );
+  };
+  
+  const addPhotoAlbum = (personId: string, name: string): string => {
+    const albumId = `album-${uuidv4()}`;
+    
+    setPeople((prev) =>
+      prev.map((person) => {
+        if (person.id === personId) {
+          const photoAlbums = person.photoAlbums || [];
+          return {
+            ...person,
+            photoAlbums: [...photoAlbums, { id: albumId, name, photos: [] }]
+          };
+        }
+        return person;
+      })
+    );
+    
+    return albumId;
+  };
+  
+  const removePhotoAlbum = (personId: string, albumId: string) => {
+    setPeople((prev) =>
+      prev.map((person) => {
+        if (person.id === personId) {
+          const photoAlbums = person.photoAlbums || [];
+          return {
+            ...person,
+            photoAlbums: photoAlbums.filter((album) => album.id !== albumId)
+          };
+        }
+        return person;
+      })
+    );
+  };
+  
+  const renamePhotoAlbum = (personId: string, albumId: string, newName: string) => {
+    setPeople((prev) =>
+      prev.map((person) => {
+        if (person.id === personId) {
+          const photoAlbums = person.photoAlbums || [];
+          const updatedAlbums = photoAlbums.map((album) => {
+            if (album.id === albumId) {
+              return { ...album, name: newName };
+            }
+            return album;
+          });
+          
+          return { ...person, photoAlbums: updatedAlbums };
+        }
+        return person;
+      })
+    );
+  };
+
   return (
     <PeopleContext.Provider
       value={{
@@ -224,7 +404,13 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deleteCustomField,
         togglePersonVisibility,
         addRelationship,
-        removeRelationship
+        removeRelationship,
+        addPhotoToGallery,
+        removePhotoFromGallery,
+        updatePhotoDescription,
+        addPhotoAlbum,
+        removePhotoAlbum,
+        renamePhotoAlbum
       }}
     >
       {children}

@@ -1,13 +1,13 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Person } from "@/context/PeopleContext";
-import { User, Edit, Trash2, Images } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Person } from '@/context/PeopleContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { Badge } from "@/components/ui/badge";
+import { useNavigate } from 'react-router-dom';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Trash2, Pencil, User } from 'lucide-react';
 
 interface PersonCardProps {
   person: Person;
@@ -16,112 +16,93 @@ interface PersonCardProps {
 
 const PersonCard: React.FC<PersonCardProps> = ({ person, onDelete }) => {
   const { t } = useLanguage();
-  const defaultPhotoUrl = 'https://www.gravatar.com/avatar/?d=mp';
-  
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+  const navigate = useNavigate();
+
+  // Helper function to safely format strings with replacements
+  const safeFormat = (key: string, replacements?: Record<string, string>) => {
+    const translatedText = t(key);
+    if (!translatedText) return key; // Fallback to key if translation is missing
+    
+    if (!replacements) return translatedText;
+    
+    return Object.entries(replacements).reduce((result, [placeholder, value]) => {
+      return result.replace(new RegExp(`{${placeholder}}`, 'g'), value || '');
+    }, translatedText);
   };
 
-  // Use the first photo from gallery
-  const displayPhotoDetail = person.photoDetails && person.photoDetails.length > 0 
-    ? person.photoDetails[0] 
-    : null;
-    
-  const displayPhoto = displayPhotoDetail?.url || person.photo || 
-    (person.photos && person.photos.length > 0 ? person.photos[0] : undefined);
-    
-  const hasMultiplePhotos = person.photoDetails 
-    ? person.photoDetails.length > 1 
-    : (person.photos ? person.photos.length > 1 : false);
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  };
+
+  const handleEdit = () => {
+    navigate(`/people/${person.id}/edit`);
+  };
+
+  const handleView = () => {
+    navigate(`/people/${person.id}`);
+  };
+
+  // Function to get a job title from custom fields if it exists
+  const getJobTitle = () => {
+    const jobTitleField = person.customFields['field-1']; // Job Title field
+    return jobTitleField || t('person.noJobTitle');
+  };
 
   return (
-    <Card className="h-full flex flex-col overflow-hidden">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex justify-between items-center">
-          <Link to={`/people/${person.id}`} className="hover:underline">
-            {person.firstName} {person.lastName}
-          </Link>
-        </CardTitle>
-        {person.nickname && (
-          <p className="text-sm text-muted-foreground">"{person.nickname}"</p>
-        )}
-      </CardHeader>
-      <CardContent className="flex-1">
-        <div className="flex flex-col items-center mb-4">
-          <div className="relative w-24 h-24 rounded-full overflow-hidden mb-2 border">
-            <img 
-              src={displayPhoto || defaultPhotoUrl} 
-              alt={`${person.firstName} ${person.lastName}`}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = defaultPhotoUrl;
-              }}
-            />
-            {hasMultiplePhotos && (
-              <Badge className="absolute bottom-0 right-0 text-xs" variant="secondary">
-                <Images className="h-3 w-3 mr-1" />
-                {person.photoDetails?.length || person.photos?.length}
-              </Badge>
+    <Card className="overflow-hidden hover:shadow-md transition-shadow">
+      <CardContent className="p-0">
+        <div className="p-4 flex flex-col sm:flex-row gap-4 items-center sm:items-start cursor-pointer" onClick={handleView}>
+          <Avatar className="h-16 w-16 border">
+            <AvatarImage src={person.photo} alt={`${person.firstName} ${person.lastName}`} />
+            <AvatarFallback className="text-lg bg-primary/10">
+              {getInitials(person.firstName, person.lastName)}
+            </AvatarFallback>
+          </Avatar>
+
+          <div className="flex-1 text-center sm:text-left">
+            <h3 className="font-semibold text-lg">{person.firstName} {person.lastName}</h3>
+            {person.nickname && (
+              <p className="text-sm text-muted-foreground">"{person.nickname}"</p>
             )}
+            <p className="text-sm text-muted-foreground">{getJobTitle()}</p>
+            <p className="text-sm">{person.email}</p>
+            {person.phone && <p className="text-sm">{person.phone}</p>}
           </div>
-          {displayPhotoDetail?.description && (
-            <p className="text-xs text-center text-muted-foreground max-w-full truncate">
-              {displayPhotoDetail.description}
-            </p>
-          )}
         </div>
-        <div className="space-y-1 text-sm">
-          {person.email && (
-            <p className="truncate">
-              <span className="font-semibold">{t('fields.email')}:</span> {person.email}
-            </p>
-          )}
-          {person.phone && (
-            <p className="truncate">
-              <span className="font-semibold">{t('fields.phone')}:</span> {person.phone}
-            </p>
-          )}
-          {person.birthDate && (
-            <p>
-              <span className="font-semibold">{t('fields.birthDate')}:</span> {formatDate(person.birthDate)}
-            </p>
-          )}
+
+        <div className="border-t px-4 py-2 flex justify-between bg-muted/30">
+          <Button variant="ghost" size="sm" onClick={handleEdit}>
+            <Pencil className="h-4 w-4 mr-2" />
+            {t('person.edit')}
+          </Button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-destructive">
+                <Trash2 className="h-4 w-4 mr-2" />
+                {t('person.delete')}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('person.areYouSure')}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {safeFormat('person.deleteConfirmation', { name: `${person.firstName} ${person.lastName}` })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t('person.cancel')}</AlertDialogCancel>
+                <AlertDialogAction 
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => onDelete(person.id)}
+                >
+                  {t('person.confirmDelete')}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </CardContent>
-      <CardFooter className="pt-2 border-t flex justify-between">
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/people/${person.id}/edit`}>
-            <Edit className="mr-2 h-4 w-4" />
-            {t('person.edit')}
-          </Link>
-        </Button>
-        
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm">
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t('person.delete')}
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t('person.areYouSure')}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {t('person.deleteConfirmation', { name: `${person.firstName} ${person.lastName}` })}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t('person.cancel')}</AlertDialogCancel>
-              <AlertDialogAction onClick={() => onDelete(person.id)}>
-                {t('person.confirmDelete')}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardFooter>
     </Card>
   );
 };

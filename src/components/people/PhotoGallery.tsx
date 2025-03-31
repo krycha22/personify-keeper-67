@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogHeader } from "@/components/ui/dialog";
@@ -15,9 +15,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLanguage } from '@/context/LanguageContext';
 import { usePeople, Person, PhotoAlbum } from '@/context/PeopleContext';
 import ImageUpload from '@/components/people/ImageUpload';
-import { Images, Trash2, GalleryHorizontal, FolderPlus, Pencil, Link } from 'lucide-react';
+import { Images, Trash2, GalleryHorizontal, FolderPlus, Pencil, Link, Save } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link as RouterLink } from 'react-router-dom';
+import { toast } from 'sonner';
 
 interface PhotoGalleryProps {
   person: Person;
@@ -34,7 +35,7 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({ person }) => {
   const [newAlbumName, setNewAlbumName] = useState('');
   const [selectedAlbumId, setSelectedAlbumId] = useState<string>("album-general");
   const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null);
-  const [description, setDescription] = useState('');
+  const [editingDescription, setEditingDescription] = useState('');
   const [isRenameAlbumOpen, setIsRenameAlbumOpen] = useState(false);
   const [albumToRename, setAlbumToRename] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
@@ -43,6 +44,7 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({ person }) => {
   const [isUserReferenceDialogOpen, setIsUserReferenceDialogOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number | null>(null);
   const [currentAlbumId, setCurrentAlbumId] = useState<string | null>(null);
+  const [isDescriptionDialogOpen, setIsDescriptionDialogOpen] = useState(false);
   
   const handleImageChange = (imageBase64: string | undefined) => {
     if (imageBase64 && person.id) {
@@ -59,19 +61,38 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({ person }) => {
       }
     }
   };
+  
+  const handleOpenDescriptionEdit = (index: number, currentDescription: string, albumId?: string) => {
+    setEditingDescription(currentDescription || '');
+    setCurrentPhotoIndex(index);
+    setCurrentAlbumId(albumId || null);
+    setIsDescriptionDialogOpen(true);
+  };
 
-  const handleDescriptionChange = (index: number, description: string, albumId?: string) => {
-    if (person.id) {
-      updatePhotoDescription(person.id, index, description, albumId);
+  const handleSaveDescription = () => {
+    if (person.id && currentPhotoIndex !== null) {
+      updatePhotoDescription(person.id, currentPhotoIndex, editingDescription, currentAlbumId || undefined)
+        .then(() => {
+          toast.success(t('person.descriptionSaved'));
+          setIsDescriptionDialogOpen(false);
+        })
+        .catch(() => {
+          toast.error(t('person.failedToSaveDescription'));
+        });
     }
   };
   
-  const handleCreateAlbum = () => {
+  const handleCreateAlbum = async () => {
     if (newAlbumName.trim() && person.id) {
-      const newAlbumId = addPhotoAlbum(person.id, newAlbumName.trim());
-      setSelectedAlbumId(newAlbumId);
-      setNewAlbumName('');
-      setIsNewAlbumOpen(false);
+      try {
+        const newAlbumId = await addPhotoAlbum(person.id, newAlbumName.trim());
+        setSelectedAlbumId(newAlbumId);
+        setNewAlbumName('');
+        setIsNewAlbumOpen(false);
+      } catch (error) {
+        console.error("Failed to create album:", error);
+        toast.error(t('person.failedToCreateAlbum'));
+      }
     }
   };
   
@@ -159,15 +180,16 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({ person }) => {
     if (currentPhotoIndex !== null && person.id) {
       const albumId = currentAlbumId || undefined;
       const album = albumId ? person.photoAlbums.find(a => a.id === albumId) : undefined;
-      const photo = album ? album.photos[currentPhotoIndex] : (person.photoDetails && person.photoDetails[currentPhotoIndex]);
+      const photos = album ? album.photos : [];
+      const photo = photos[currentPhotoIndex];
       
       if (photo) {
-        const currentDescription = photo.description || '';
-        const newDescription = currentDescription ? `${currentDescription} @${userId}` : `@${userId}`;
-        handleDescriptionChange(currentPhotoIndex, newDescription, albumId);
+        const currentDesc = photo.description || '';
+        setEditingDescription(currentDesc ? `${currentDesc} @${userId}` : `@${userId}`);
       }
       
       setIsUserReferenceDialogOpen(false);
+      setIsDescriptionDialogOpen(true);
     }
   };
   
@@ -265,29 +287,35 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({ person }) => {
                               </div>
                               <div className="space-y-2">
                                 <div className="flex justify-between items-center">
-                                  <label htmlFor={`photo-description-${index}`} className="text-sm font-medium">
+                                  <h3 className="text-sm font-medium">
                                     {t('person.photoDescription')}
-                                  </label>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => handleOpenUserReferenceDialog(index, album.id)}
-                                  >
-                                    <Link className="h-4 w-4 mr-2" />
-                                    {t('person.tagPerson')}
-                                  </Button>
+                                  </h3>
+                                  <div className="flex gap-2">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => handleOpenUserReferenceDialog(index, album.id)}
+                                    >
+                                      <Link className="h-4 w-4 mr-2" />
+                                      {t('person.tagPerson')}
+                                    </Button>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => handleOpenDescriptionEdit(index, photoDetail.description || '', album.id)}
+                                    >
+                                      <Pencil className="h-4 w-4 mr-2" />
+                                      {t('person.editDescription')}
+                                    </Button>
+                                  </div>
                                 </div>
-                                <div className="flex gap-2">
-                                  <Input
-                                    id={`photo-description-${index}`}
-                                    value={photoDetail.description || ''}
-                                    onChange={(e) => handleDescriptionChange(index, e.target.value, album.id)}
-                                    placeholder={t('person.enterPhotoDescription')}
-                                  />
-                                </div>
-                                {photoDetail.description && (
-                                  <div className="text-sm text-muted-foreground">
+                                {photoDetail.description ? (
+                                  <div className="text-sm p-3 bg-muted rounded-md">
                                     {formatDescriptionWithUserLinks(photoDetail.description)}
+                                  </div>
+                                ) : (
+                                  <div className="text-sm text-muted-foreground italic p-3 bg-muted/50 rounded-md">
+                                    {t('person.noDescription')}
                                   </div>
                                 )}
                               </div>
@@ -480,6 +508,35 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({ person }) => {
                     </div>
                   ))}
               </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isDescriptionDialogOpen} onOpenChange={setIsDescriptionDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('person.editPhotoDescription')}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label htmlFor="photo-description" className="text-sm font-medium">
+                  {t('person.photoDescription')}
+                </label>
+                <textarea
+                  id="photo-description"
+                  value={editingDescription}
+                  onChange={(e) => setEditingDescription(e.target.value)}
+                  placeholder={t('person.enterPhotoDescription')}
+                  className="w-full border rounded-md p-2 min-h-[100px]"
+                />
+              </div>
+              <Button 
+                onClick={handleSaveDescription}
+                className="w-full"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {t('person.saveDescription')}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

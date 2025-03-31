@@ -72,7 +72,7 @@ interface PeopleContextType {
   getDefaultAlbums: () => PhotoAlbum[];
   addPhotoToGallery: (personId: string, photo: string, description: string, albumId?: string) => void;
   removePhotoFromGallery: (personId: string, photoIndex: number, albumId?: string) => void;
-  updatePhotoDescription: (personId: string, photoIndex: number, description: string, albumId?: string) => void;
+  updatePhotoDescription: (personId: string, photoIndex: number, description: string, albumId?: string) => Promise<void>;
   addPhotoAlbum: (personId: string, albumName: string) => Promise<string>;
   removePhotoAlbum: (personId: string, albumId: string) => void;
   renamePhotoAlbum: (personId: string, albumId: string, newName: string) => void;
@@ -590,40 +590,47 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  const updatePhotoDescription = async (personId: string, photoIndex: number, description: string, albumId?: string) => {
+  const updatePhotoDescription = async (personId: string, photoIndex: number, description: string, albumId?: string): Promise<void> => {
     const person = people.find(p => p.id === personId);
-    if (!person) return;
+    if (!person) return Promise.reject("Person not found");
     
-    if (albumId) {
-      const updatedAlbums = person.photoAlbums.map(album => {
-        if (album.id === albumId) {
-          const updatedPhotos = [...album.photos];
-          if (updatedPhotos[photoIndex]) {
-            updatedPhotos[photoIndex] = {
-              ...updatedPhotos[photoIndex],
-              description
+    try {
+      if (albumId) {
+        const updatedAlbums = person.photoAlbums.map(album => {
+          if (album.id === albumId) {
+            const updatedPhotos = [...album.photos];
+            if (updatedPhotos[photoIndex]) {
+              updatedPhotos[photoIndex] = {
+                ...updatedPhotos[photoIndex],
+                description
+              };
+            }
+            
+            return {
+              ...album,
+              photos: updatedPhotos
             };
           }
-          
-          return {
-            ...album,
-            photos: updatedPhotos
+          return album;
+        });
+        
+        await updatePerson(personId, { photoAlbums: updatedAlbums });
+        return Promise.resolve();
+      } else {
+        const updatedPhotoDetails = [...(person.photoDetails || [])];
+        if (updatedPhotoDetails[photoIndex]) {
+          updatedPhotoDetails[photoIndex] = {
+            ...updatedPhotoDetails[photoIndex],
+            description
           };
         }
-        return album;
-      });
-      
-      await updatePerson(personId, { photoAlbums: updatedAlbums });
-    } else {
-      const updatedPhotoDetails = [...(person.photoDetails || [])];
-      if (updatedPhotoDetails[photoIndex]) {
-        updatedPhotoDetails[photoIndex] = {
-          ...updatedPhotoDetails[photoIndex],
-          description
-        };
+        
+        await updatePerson(personId, { photoDetails: updatedPhotoDetails });
+        return Promise.resolve();
       }
-      
-      await updatePerson(personId, { photoDetails: updatedPhotoDetails });
+    } catch (error) {
+      console.error("Error updating photo description:", error);
+      return Promise.reject(error);
     }
   };
 

@@ -8,6 +8,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Trash2, Pencil, User } from 'lucide-react';
+import PersonTag from './PersonTag';
 
 interface PersonCardProps {
   person: Person;
@@ -67,6 +68,19 @@ const PersonCard: React.FC<PersonCardProps> = ({ person, onDelete }) => {
             <p className="text-sm text-muted-foreground">{getJobTitle()}</p>
             <p className="text-sm">{person.email}</p>
             {person.phone && <p className="text-sm">{person.phone}</p>}
+            
+            {/* Tags */}
+            {person.tags && person.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {person.tags.map((tag, index) => (
+                  <PersonTag 
+                    key={`${tag.type}-${index}`} 
+                    type={tag.type} 
+                    customLabel={tag.customLabel}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

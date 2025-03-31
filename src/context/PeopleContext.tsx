@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { TagType } from '@/components/people/PersonTag';
 
 export interface Photo {
   url: string;
@@ -21,7 +22,10 @@ export interface Person {
   birthDate?: string;
   notes?: string;
   nickname?: string;
-  tags?: string[];
+  tags?: {
+    type: TagType;
+    customLabel?: string;
+  }[];
   isHidden?: boolean;
   photo?: string;
   photoDetails?: Photo[];
@@ -72,6 +76,8 @@ interface PeopleContextType {
   renamePhotoAlbum: (personId: string, albumId: string, newName: string) => void;
   addRelationship: (personId: string, relatedPersonId: string, relationshipType: string) => void;
   removeRelationship: (personId: string, relatedPersonId: string) => void;
+  addTagToPerson: (personId: string, tagType: TagType, customLabel?: string) => void;
+  removeTagFromPerson: (personId: string, tagType: TagType) => void;
 }
 
 const PeopleContext = createContext<PeopleContextType | undefined>(undefined);
@@ -129,7 +135,9 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       lastName: personData.lastName,
       isHidden: false,
       photoAlbums: personData.photoAlbums || JSON.parse(JSON.stringify(defaultPhotoAlbums)),
-      relationships: personData.relationships || []
+      relationships: personData.relationships || [],
+      customFields: personData.customFields || {},
+      tags: personData.tags || []
     };
     setPeople((prev) => [...prev, newPerson]);
     return newPerson;
@@ -398,6 +406,38 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }));
   };
 
+  const addTagToPerson = (personId: string, tagType: TagType, customLabel?: string) => {
+    setPeople((prev) =>
+      prev.map((person) => {
+        if (person.id !== personId) return person;
+        
+        const existingTagIndex = person.tags?.findIndex(tag => tag.type === tagType);
+        
+        if (existingTagIndex !== undefined && existingTagIndex >= 0) {
+          const updatedTags = [...(person.tags || [])];
+          updatedTags[existingTagIndex] = { type: tagType, customLabel };
+          
+          return { ...person, tags: updatedTags };
+        } else {
+          const updatedTags = [...(person.tags || []), { type: tagType, customLabel }];
+          return { ...person, tags: updatedTags };
+        }
+      })
+    );
+  };
+
+  const removeTagFromPerson = (personId: string, tagType: TagType) => {
+    setPeople((prev) =>
+      prev.map((person) => {
+        if (person.id !== personId) return person;
+        
+        const updatedTags = person.tags?.filter(tag => tag.type !== tagType) || [];
+        
+        return { ...person, tags: updatedTags };
+      })
+    );
+  };
+
   const generateId = () => {
     return Math.random().toString(36).substring(2, 15) + 
            Math.random().toString(36).substring(2, 15);
@@ -425,7 +465,9 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         removePhotoAlbum,
         renamePhotoAlbum,
         addRelationship,
-        removeRelationship
+        removeRelationship,
+        addTagToPerson,
+        removeTagFromPerson
       }}
     >
       {children}

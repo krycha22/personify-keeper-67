@@ -1,5 +1,4 @@
-
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from "@/components/ui/button";
@@ -8,15 +7,20 @@ import { usePeople } from '@/context/PeopleContext';
 import { useLanguage } from '@/context/LanguageContext';
 import RelationshipManager from '@/components/people/RelationshipManager';
 import PhotoGallery from '@/components/people/PhotoGallery';
-import { ArrowLeft, Edit, Mail, MapPin, Phone, Calendar, FileText, User } from 'lucide-react';
+import { ArrowLeft, Edit, Mail, MapPin, Phone, Calendar, FileText, User, Tag } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import PersonTag, { TagType, tagDefinitions } from '@/components/people/PersonTag';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useToast } from "@/hooks/use-toast";
 
 const PersonView = () => {
   const { id } = useParams<{ id: string }>();
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
-  const { getPerson } = usePeople();
+  const { getPerson, addTagToPerson, removeTagFromPerson } = usePeople();
   const { t } = useLanguage();
+  const { toast } = useToast();
+  const [popoverOpen, setPopoverOpen] = useState(false);
   
   const person = id ? getPerson(id) : undefined;
 
@@ -53,6 +57,29 @@ const PersonView = () => {
     return date.toLocaleDateString();
   };
 
+  const handleAddTag = (tagType: TagType) => {
+    if (!id) return;
+    
+    addTagToPerson(id, tagType);
+    setPopoverOpen(false);
+    
+    toast({
+      title: "Tag Added",
+      description: `${tagDefinitions[tagType].label} tag has been added.`,
+    });
+  };
+
+  const handleRemoveTag = (tagType: TagType) => {
+    if (!id) return;
+    
+    removeTagFromPerson(id, tagType);
+    
+    toast({
+      title: "Tag Removed",
+      description: `${tagDefinitions[tagType].label} tag has been removed.`,
+    });
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -78,8 +105,54 @@ const PersonView = () => {
           </div>
         </div>
 
+        <div className="flex items-center flex-wrap gap-2">
+          {person.tags && person.tags.length > 0 ? (
+            <>
+              {person.tags.map((tag, index) => (
+                <PersonTag 
+                  key={`${tag.type}-${index}`} 
+                  type={tag.type} 
+                  customLabel={tag.customLabel}
+                  onClick={() => handleRemoveTag(tag.type)}
+                />
+              ))}
+            </>
+          ) : null}
+          
+          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1">
+                <Tag className="h-4 w-4" />
+                Add Tag
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-3">
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm">Add a tag</h4>
+                <div className="grid gap-1.5">
+                  {(Object.keys(tagDefinitions) as TagType[]).map((tagType) => {
+                    const alreadyHasTag = person.tags?.some(tag => tag.type === tagType);
+                    return (
+                      <Button
+                        key={tagType}
+                        variant="ghost"
+                        size="sm"
+                        className="justify-start"
+                        disabled={alreadyHasTag}
+                        onClick={() => handleAddTag(tagType)}
+                      >
+                        {tagDefinitions[tagType].icon}
+                        <span className="ml-2">{tagDefinitions[tagType].label}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Left column - Photo & basic info */}
           <Card>
             <CardContent className="pt-6">
               <div className="flex flex-col items-center mb-6">
@@ -156,7 +229,6 @@ const PersonView = () => {
             </CardContent>
           </Card>
 
-          {/* Middle column - Custom fields & notes */}
           <Card>
             <CardHeader>
               <CardTitle>{t('fields.additionalInfo')}</CardTitle>
@@ -206,12 +278,10 @@ const PersonView = () => {
             </CardContent>
           </Card>
 
-          {/* Right column - Relationships */}
           <Card>
             <RelationshipManager person={person} />
           </Card>
           
-          {/* Photo Gallery - Spans all columns */}
           <Card className="md:col-span-3">
             <PhotoGallery person={person} />
           </Card>

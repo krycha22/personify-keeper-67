@@ -32,6 +32,7 @@ const People = () => {
     }
     
     // Filter people based on search query
+    // Note: searchPeople now already filters hidden profiles for non-admin users
     setSearchResults(searchPeople(query));
   };
 

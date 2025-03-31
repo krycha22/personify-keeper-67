@@ -4,11 +4,13 @@ import Layout from '@/components/layout/Layout';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePeople } from '@/context/PeopleContext';
+import { useAuth } from '@/context/AuthContext';
 import { Link } from 'react-router-dom';
 import { UserPlus, Users, Settings, Search } from 'lucide-react';
 
 const Index = () => {
   const { people } = usePeople();
+  const { isAdmin } = useAuth();
 
   return (
     <Layout>

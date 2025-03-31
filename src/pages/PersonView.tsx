@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -9,9 +8,11 @@ import { useLanguage } from '@/context/LanguageContext';
 import RelationshipManager from '@/components/people/RelationshipManager';
 import PhotoGallery from '@/components/people/PhotoGallery';
 import { ArrowLeft, Edit, Mail, MapPin, Phone, Calendar, FileText, User } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const PersonView = () => {
   const { id } = useParams<{ id: string }>();
+  const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const { getPerson } = usePeople();
   const { t } = useLanguage();
@@ -23,6 +24,12 @@ const PersonView = () => {
       console.error('Person not found:', id);
     }
   }, [person, id]);
+
+  useEffect(() => {
+    if (person && person.isHidden && !isAdmin()) {
+      navigate('/people');
+    }
+  }, [person, isAdmin, navigate]);
 
   if (!person) {
     return (

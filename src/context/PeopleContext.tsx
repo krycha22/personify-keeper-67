@@ -137,18 +137,15 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const searchPeople = (query: string) => {
+    // First, filter out hidden profiles if user is not admin
+    const visiblePeople = isAdmin() ? people : people.filter(person => !person.isHidden);
+    
     if (!query) {
-      // If user is not admin, don't show hidden profiles
-      return isAdmin() ? people : people.filter((person) => !person.isHidden);
+      return visiblePeople;
     }
 
     const lowerQuery = query.toLowerCase();
-    const filtered = people.filter((person) => {
-      // If user is not admin and profile is hidden, don't show it
-      if (!isAdmin() && person.isHidden) {
-        return false;
-      }
-
+    const filtered = visiblePeople.filter((person) => {
       const fullName = `${person.firstName} ${person.lastName}`.toLowerCase();
       const nickname = person.nickname?.toLowerCase() || '';
       const email = person.email?.toLowerCase() || '';
@@ -199,7 +196,7 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   return (
     <PeopleContext.Provider
       value={{
-        people,
+        people: isAdmin() ? people : people.filter(person => !person.isHidden),
         customFields,
         addPerson,
         updatePerson,

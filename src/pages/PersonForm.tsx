@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -39,7 +38,6 @@ const PersonForm = () => {
     address: '',
     birthDate: '',
     photo: undefined,
-    photos: [],
     photoDetails: [],
     photoAlbums: JSON.parse(JSON.stringify(defaultPhotoAlbums)),
     notes: '',
@@ -58,7 +56,6 @@ const PersonForm = () => {
         address: existingPerson.address || '',
         birthDate: existingPerson.birthDate || '',
         photo: existingPerson.photo,
-        photos: existingPerson.photos || [],
         photoDetails: existingPerson.photoDetails || [],
         photoAlbums: existingPerson.photoAlbums || JSON.parse(JSON.stringify(defaultPhotoAlbums)),
         notes: existingPerson.notes || '',
@@ -88,12 +85,9 @@ const PersonForm = () => {
 
   const handleImageChange = (imageBase64: string | undefined) => {
     setFormData(prev => {
-      // If there's an image being set
       if (imageBase64) {
-        // Update "Me" album
         const updatedAlbums = prev.photoAlbums.map(album => {
           if (album.id === 'album-me') {
-            // Add this image to the "Me" album if it's empty
             if (album.photos.length === 0) {
               return {
                 ...album,
@@ -110,7 +104,6 @@ const PersonForm = () => {
           photoAlbums: updatedAlbums
         };
       } else {
-        // If removing image
         return {
           ...prev,
           photo: undefined
@@ -166,7 +159,6 @@ const PersonForm = () => {
 
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Left column - Photo */}
             <Card>
               <CardHeader>
                 <CardTitle>{t('fields.photo')}</CardTitle>
@@ -179,7 +171,6 @@ const PersonForm = () => {
               </CardContent>
             </Card>
 
-            {/* Middle column - Basic Info */}
             <Card className="md:col-span-2">
               <CardHeader>
                 <CardTitle>{t('fields.basicInfo')}</CardTitle>
@@ -298,7 +289,6 @@ const PersonForm = () => {
               </CardContent>
             </Card>
 
-            {/* Custom Fields */}
             {customFields.length > 0 && (
               <Card className="md:col-span-3">
                 <CardHeader>

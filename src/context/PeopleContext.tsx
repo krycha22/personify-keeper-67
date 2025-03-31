@@ -14,7 +14,9 @@ export interface Person {
   nickname?: string;
   tags?: string[];
   isHidden?: boolean;
-  photoAlbums?: PhotoAlbum[];
+  photo?: string;
+  photoDetails?: {url: string, description: string}[];
+  photoAlbums: PhotoAlbum[];
   [key: string]: any;
 }
 
@@ -28,13 +30,14 @@ export interface CustomField {
 export interface PhotoAlbum {
   id: string;
   name: string;
+  photos: {url: string, description: string}[];
 }
 
 export const defaultPhotoAlbums: PhotoAlbum[] = [
-  { id: '1', name: 'Family' },
-  { id: '2', name: 'Friends' },
-  { id: '3', name: 'Work' },
-  { id: '4', name: 'Vacation' }
+  { id: '1', name: 'Family', photos: [] },
+  { id: '2', name: 'Friends', photos: [] },
+  { id: '3', name: 'Work', photos: [] },
+  { id: '4', name: 'Vacation', photos: [] }
 ];
 
 interface PeopleContextType {
@@ -50,6 +53,12 @@ interface PeopleContextType {
   togglePersonVisibility: (id: string) => void;
   addDefaultAlbum: (name: string) => void;
   getDefaultAlbums: () => PhotoAlbum[];
+  addPhotoToGallery: (personId: string, photo: string, description: string, albumId?: string) => void;
+  removePhotoFromGallery: (personId: string, photoIndex: number, albumId?: string) => void;
+  updatePhotoDescription: (personId: string, photoIndex: number, description: string, albumId?: string) => void;
+  addPhotoAlbum: (personId: string, albumName: string) => string;
+  removePhotoAlbum: (personId: string, albumId: string) => void;
+  renamePhotoAlbum: (personId: string, albumId: string, newName: string) => void;
 }
 
 const PeopleContext = createContext<PeopleContextType | undefined>(undefined);
@@ -106,7 +115,13 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       id: generateId(),
       firstName: personData.firstName,
       lastName: personData.lastName,
-      isHidden: false
+      isHidden: false,
+      // Ensure photoAlbums is initialized
+      photoAlbums: personData.photoAlbums || [
+        { id: "album-me", name: "Me", photos: [] },
+        { id: "album-general", name: "General", photos: [] },
+        { id: "album-friends", name: "Friends", photos: [] },
+      ]
     };
     setPeople((prev) => [...prev, newPerson]);
     return newPerson;
@@ -179,13 +194,175 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const addDefaultAlbum = (name: string) => {
     const newAlbum: PhotoAlbum = {
       id: generateId(),
-      name
+      name,
+      photos: []
     };
     setDefaultAlbums((prev) => [...prev, newAlbum]);
   };
   
   const getDefaultAlbums = () => {
     return defaultAlbums;
+  };
+
+  // Photo Gallery Functions
+  const addPhotoToGallery = (personId: string, photoUrl: string, description: string, albumId?: string) => {
+    setPeople(prev => prev.map(person => {
+      if (person.id !== personId) return person;
+
+      if (albumId) {
+        // Add to a specific album
+        const updatedAlbums = person.photoAlbums.map(album => {
+          if (album.id === albumId) {
+            return {
+              ...album,
+              photos: [...album.photos, { url: photoUrl, description }]
+            };
+          }
+          return album;
+        });
+        
+        return {
+          ...person,
+          photoAlbums: updatedAlbums
+        };
+      } else {
+        // Add to general album if no album specified
+        const updatedAlbums = person.photoAlbums.map(album => {
+          if (album.id === "album-general") {
+            return {
+              ...album,
+              photos: [...album.photos, { url: photoUrl, description }]
+            };
+          }
+          return album;
+        });
+        
+        return {
+          ...person,
+          photoAlbums: updatedAlbums
+        };
+      }
+    }));
+  };
+
+  const removePhotoFromGallery = (personId: string, photoIndex: number, albumId?: string) => {
+    setPeople(prev => prev.map(person => {
+      if (person.id !== personId) return person;
+
+      if (albumId) {
+        // Remove from a specific album
+        const updatedAlbums = person.photoAlbums.map(album => {
+          if (album.id === albumId) {
+            return {
+              ...album,
+              photos: album.photos.filter((_, index) => index !== photoIndex)
+            };
+          }
+          return album;
+        });
+        
+        return {
+          ...person,
+          photoAlbums: updatedAlbums
+        };
+      } else {
+        // Remove from photoDetails (legacy storage)
+        const updatedPhotoDetails = (person.photoDetails || []).filter((_, index) => index !== photoIndex);
+        
+        return {
+          ...person,
+          photoDetails: updatedPhotoDetails
+        };
+      }
+    }));
+  };
+
+  const updatePhotoDescription = (personId: string, photoIndex: number, description: string, albumId?: string) => {
+    setPeople(prev => prev.map(person => {
+      if (person.id !== personId) return person;
+
+      if (albumId) {
+        // Update in a specific album
+        const updatedAlbums = person.photoAlbums.map(album => {
+          if (album.id === albumId) {
+            const updatedPhotos = [...album.photos];
+            if (updatedPhotos[photoIndex]) {
+              updatedPhotos[photoIndex] = {
+                ...updatedPhotos[photoIndex],
+                description
+              };
+            }
+            
+            return {
+              ...album,
+              photos: updatedPhotos
+            };
+          }
+          return album;
+        });
+        
+        return {
+          ...person,
+          photoAlbums: updatedAlbums
+        };
+      } else {
+        // Update in photoDetails (legacy storage)
+        const updatedPhotoDetails = [...(person.photoDetails || [])];
+        if (updatedPhotoDetails[photoIndex]) {
+          updatedPhotoDetails[photoIndex] = {
+            ...updatedPhotoDetails[photoIndex],
+            description
+          };
+        }
+        
+        return {
+          ...person,
+          photoDetails: updatedPhotoDetails
+        };
+      }
+    }));
+  };
+
+  const addPhotoAlbum = (personId: string, albumName: string) => {
+    const newAlbumId = `album-${generateId()}`;
+    
+    setPeople(prev => prev.map(person => {
+      if (person.id !== personId) return person;
+      
+      return {
+        ...person,
+        photoAlbums: [
+          ...person.photoAlbums,
+          { id: newAlbumId, name: albumName, photos: [] }
+        ]
+      };
+    }));
+    
+    return newAlbumId;
+  };
+
+  const removePhotoAlbum = (personId: string, albumId: string) => {
+    setPeople(prev => prev.map(person => {
+      if (person.id !== personId) return person;
+      
+      return {
+        ...person,
+        photoAlbums: person.photoAlbums.filter(album => album.id !== albumId)
+      };
+    }));
+  };
+
+  const renamePhotoAlbum = (personId: string, albumId: string, newName: string) => {
+    setPeople(prev => prev.map(person => {
+      if (person.id !== personId) return person;
+      
+      return {
+        ...person,
+        photoAlbums: person.photoAlbums.map(album => 
+          album.id === albumId ? { ...album, name: newName } : album
+        )
+      };
+    }));
   };
 
   const generateId = () => {
@@ -207,7 +384,13 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deleteCustomField,
         togglePersonVisibility,
         addDefaultAlbum,
-        getDefaultAlbums
+        getDefaultAlbums,
+        addPhotoToGallery,
+        removePhotoFromGallery,
+        updatePhotoDescription,
+        addPhotoAlbum,
+        removePhotoAlbum,
+        renamePhotoAlbum
       }}
     >
       {children}

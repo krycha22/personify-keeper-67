@@ -11,19 +11,28 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+  // Initialize state with function to avoid SSR issues
   const [theme, setTheme] = useState<Theme>(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return (savedTheme as Theme) || 
-      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    // Only access localStorage in browser environment
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme');
+      return (savedTheme as Theme) || 
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    }
+    // Default to light theme if not in browser
+    return 'light';
   });
 
   useEffect(() => {
-    localStorage.setItem('theme', theme);
-    
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    // Only run effect in browser environment
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', theme);
+      
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
     }
   }, [theme]);
 

@@ -30,7 +30,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, initialQuery = '' }) =>
     <form onSubmit={handleSearch} className="relative flex w-full max-w-md mx-auto">
       <Input
         type="text"
-        placeholder="Search by name, email, phone..."
+        placeholder="Search by name, nickname, email, phone..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="pr-12"

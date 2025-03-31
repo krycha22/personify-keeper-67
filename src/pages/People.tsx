@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { usePeople } from '@/context/PeopleContext';
 import PersonCard from '@/components/people/PersonCard';
 import SearchBar from '@/components/people/SearchBar';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Users } from 'lucide-react';
 
 const People = () => {
   const { people, searchPeople, deletePerson } = usePeople();

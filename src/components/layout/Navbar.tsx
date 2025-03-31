@@ -4,9 +4,12 @@ import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { MoonIcon, SunIcon, User, Users, Settings } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
+import AuthButtons from './AuthButtons';
+import { useAuth } from '@/context/AuthContext';
 
 const Navbar: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
   const location = useLocation();
   
   const isActive = (path: string) => {
@@ -23,24 +26,28 @@ const Navbar: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2">
-          <Link to="/">
-            <Button variant="ghost" className={isActive('/')}>
-              <Users className="mr-2 h-4 w-4" />
-              Dashboard
-            </Button>
-          </Link>
-          <Link to="/people">
-            <Button variant="ghost" className={isActive('/people')}>
-              <Users className="mr-2 h-4 w-4" />
-              People
-            </Button>
-          </Link>
-          <Link to="/settings">
-            <Button variant="ghost" className={isActive('/settings')}>
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </Button>
-          </Link>
+          {user && (
+            <>
+              <Link to="/">
+                <Button variant="ghost" className={isActive('/')}>
+                  <Users className="mr-2 h-4 w-4" />
+                  Dashboard
+                </Button>
+              </Link>
+              <Link to="/people">
+                <Button variant="ghost" className={isActive('/people')}>
+                  <Users className="mr-2 h-4 w-4" />
+                  People
+                </Button>
+              </Link>
+              <Link to="/settings">
+                <Button variant="ghost" className={isActive('/settings')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </Button>
+              </Link>
+            </>
+          )}
           <Button variant="ghost" size="icon" onClick={toggleTheme}>
             {theme === 'light' ? (
               <SunIcon className="h-5 w-5" />
@@ -48,6 +55,7 @@ const Navbar: React.FC = () => {
               <MoonIcon className="h-5 w-5" />
             )}
           </Button>
+          <AuthButtons />
         </div>
       </div>
     </nav>

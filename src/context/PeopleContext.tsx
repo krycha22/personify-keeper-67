@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { saveJsonFile, loadJsonFile, saveBinaryFile, base64ToBlob } from '@/utils/fileStorage';
-import { useToast } from "@/hooks/use-toast";
 
 export interface Photo {
   url: string;
@@ -56,8 +54,6 @@ export const defaultPhotoAlbums: PhotoAlbum[] = [
 interface PeopleContextType {
   people: Person[];
   customFields: CustomField[];
-  isFileStorageInitialized: boolean;
-  setFileStorageInitialized: (initialized: boolean) => void;
   addPerson: (person: Omit<Person, 'id'>) => Person;
   updatePerson: (id: string, personData: Partial<Person>) => void;
   deletePerson: (id: string) => void;
@@ -88,109 +84,42 @@ export const usePeople = () => {
   return context;
 };
 
-const PEOPLE_FILE = 'people.json';
-const CUSTOM_FIELDS_FILE = 'custom_fields.json';
-const DEFAULT_ALBUMS_FILE = 'default_albums.json';
+const LOCAL_STORAGE_KEY = 'personifykeeper_people';
+const CUSTOM_FIELDS_KEY = 'personifykeeper_custom_fields';
+const DEFAULT_ALBUMS_KEY = 'personifykeeper_default_albums';
 
 export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [people, setPeople] = useState<Person[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
-  const [defaultAlbums, setDefaultAlbums] = useState<PhotoAlbum[]>(defaultPhotoAlbums);
-  const [isFileStorageInitialized, setFileStorageInitialized] = useState<boolean>(false);
+  const [defaultAlbums, setDefaultAlbums] = useState<PhotoAlbum[]>(() => {
+    const savedAlbums = localStorage.getItem(DEFAULT_ALBUMS_KEY);
+    return savedAlbums ? JSON.parse(savedAlbums) : defaultPhotoAlbums;
+  });
   const { isAdmin } = useAuth();
-  const { toast } = useToast();
 
   useEffect(() => {
-    const loadData = async () => {
-      if (isFileStorageInitialized) {
-        try {
-          const loadedPeople = await loadJsonFile<Person[]>(PEOPLE_FILE, 'people', []);
-          setPeople(loadedPeople);
-
-          const loadedCustomFields = await loadJsonFile<CustomField[]>(CUSTOM_FIELDS_FILE, 'settings', []);
-          setCustomFields(loadedCustomFields);
-
-          const loadedDefaultAlbums = await loadJsonFile<PhotoAlbum[]>(DEFAULT_ALBUMS_FILE, 'settings', defaultPhotoAlbums);
-          setDefaultAlbums(loadedDefaultAlbums);
-        } catch (error) {
-          console.error("Error loading data from files:", error);
-          toast({
-            title: "Error loading data",
-            description: "Could not load data from files. Using default values.",
-            variant: "destructive",
-          });
-        }
-      } else {
-        const savedPeople = localStorage.getItem('personifykeeper_people');
-        if (savedPeople) {
-          setPeople(JSON.parse(savedPeople));
-        }
-
-        const savedCustomFields = localStorage.getItem('personifykeeper_custom_fields');
-        if (savedCustomFields) {
-          setCustomFields(JSON.parse(savedCustomFields));
-        }
-
-        const savedDefaultAlbums = localStorage.getItem('personifykeeper_default_albums');
-        if (savedDefaultAlbums) {
-          setDefaultAlbums(JSON.parse(savedDefaultAlbums));
-        }
-      }
-    };
-
-    loadData();
-  }, [isFileStorageInitialized]);
-
-  useEffect(() => {
-    const saveData = async () => {
-      if (isFileStorageInitialized) {
-        await saveJsonFile(PEOPLE_FILE, people, 'people');
-      } else {
-        localStorage.setItem('personifykeeper_people', JSON.stringify(people));
-      }
-    };
-
-    if (people.length > 0) {
-      saveData();
+    const savedPeople = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (savedPeople) {
+      setPeople(JSON.parse(savedPeople));
     }
-  }, [people, isFileStorageInitialized]);
+
+    const savedCustomFields = localStorage.getItem(CUSTOM_FIELDS_KEY);
+    if (savedCustomFields) {
+      setCustomFields(JSON.parse(savedCustomFields));
+    }
+  }, []);
 
   useEffect(() => {
-    const saveData = async () => {
-      if (isFileStorageInitialized) {
-        await saveJsonFile(CUSTOM_FIELDS_FILE, customFields, 'settings');
-      } else {
-        localStorage.setItem('personifykeeper_custom_fields', JSON.stringify(customFields));
-      }
-    };
-
-    if (customFields.length > 0) {
-      saveData();
-    }
-  }, [customFields, isFileStorageInitialized]);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(people));
+  }, [people]);
 
   useEffect(() => {
-    const saveData = async () => {
-      if (isFileStorageInitialized) {
-        await saveJsonFile(DEFAULT_ALBUMS_FILE, defaultAlbums, 'settings');
-      } else {
-        localStorage.setItem('personifykeeper_default_albums', JSON.stringify(defaultAlbums));
-      }
-    };
-
-    saveData();
-  }, [defaultAlbums, isFileStorageInitialized]);
-
-  const savePhotoToFile = async (photoData: string): Promise<string> => {
-    if (isFileStorageInitialized) {
-      const photoId = generateId();
-      const fileName = `${photoId}.jpg`;
-      const photoBlob = base64ToBlob(photoData);
-      await saveBinaryFile(fileName, photoBlob, 'photos');
-      return fileName;
-    }
-    return photoData;
-  };
+    localStorage.setItem(CUSTOM_FIELDS_KEY, JSON.stringify(customFields));
+  }, [customFields]);
+  
+  useEffect(() => {
+    localStorage.setItem(DEFAULT_ALBUMS_KEY, JSON.stringify(defaultAlbums));
+  }, [defaultAlbums]);
 
   const addPerson = (personData: Omit<Person, 'id'>) => {
     const newPerson: Person = {
@@ -199,40 +128,19 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       firstName: personData.firstName,
       lastName: personData.lastName,
       isHidden: false,
-      photoAlbums: personData.photoAlbums || JSON.parse(JSON.stringify(defaultAlbums)),
+      photoAlbums: personData.photoAlbums || JSON.parse(JSON.stringify(defaultPhotoAlbums)),
       relationships: personData.relationships || []
     };
-    
-    if (isFileStorageInitialized && newPerson.photo) {
-      savePhotoToFile(newPerson.photo).then((photoFileName) => {
-        newPerson.photo = photoFileName;
-        setPeople((prev) => [...prev, newPerson]);
-      });
-    } else {
-      setPeople((prev) => [...prev, newPerson]);
-    }
-    
+    setPeople((prev) => [...prev, newPerson]);
     return newPerson;
   };
 
   const updatePerson = (id: string, personData: Partial<Person>) => {
-    const updatedData = { ...personData };
-    
-    if (isFileStorageInitialized && personData.photo && personData.photo.startsWith('data:')) {
-      savePhotoToFile(personData.photo).then((photoFileName) => {
-        setPeople((prev) =>
-          prev.map((person) =>
-            person.id === id ? { ...person, ...updatedData, photo: photoFileName } : person
-          )
-        );
-      });
-    } else {
-      setPeople((prev) =>
-        prev.map((person) =>
-          person.id === id ? { ...person, ...updatedData } : person
-        )
-      );
-    }
+    setPeople((prev) =>
+      prev.map((person) =>
+        person.id === id ? { ...person, ...personData } : person
+      )
+    );
   };
 
   const deletePerson = (id: string) => {
@@ -303,13 +211,7 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return defaultAlbums;
   };
 
-  const addPhotoToGallery = async (personId: string, photoUrl: string, description: string, albumId?: string) => {
-    let finalPhotoUrl = photoUrl;
-    
-    if (isFileStorageInitialized && photoUrl.startsWith('data:')) {
-      finalPhotoUrl = await savePhotoToFile(photoUrl);
-    }
-    
+  const addPhotoToGallery = (personId: string, photoUrl: string, description: string, albumId?: string) => {
     setPeople(prev => prev.map(person => {
       if (person.id !== personId) return person;
 
@@ -318,7 +220,7 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (album.id === albumId) {
             return {
               ...album,
-              photos: [...album.photos, { url: finalPhotoUrl, description }]
+              photos: [...album.photos, { url: photoUrl, description }]
             };
           }
           return album;
@@ -333,7 +235,7 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (album.id === "album-general") {
             return {
               ...album,
-              photos: [...album.photos, { url: finalPhotoUrl, description }]
+              photos: [...album.photos, { url: photoUrl, description }]
             };
           }
           return album;
@@ -506,8 +408,6 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       value={{
         people: isAdmin() ? people : people.filter(person => !person.isHidden),
         customFields,
-        isFileStorageInitialized,
-        setFileStorageInitialized,
         addPerson,
         updatePerson,
         deletePerson,

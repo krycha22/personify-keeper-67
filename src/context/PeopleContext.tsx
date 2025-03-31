@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 
@@ -66,6 +65,8 @@ interface PeopleContextType {
   addPhotoAlbum: (personId: string, albumName: string) => string;
   removePhotoAlbum: (personId: string, albumId: string) => void;
   renamePhotoAlbum: (personId: string, albumId: string, newName: string) => void;
+  addDefaultAlbum: (albumName: string) => string;
+  getDefaultAlbums: () => PhotoAlbum[];
 }
 
 const PeopleContext = createContext<PeopleContextType | undefined>(undefined);
@@ -75,7 +76,7 @@ const defaultCustomFields: CustomField[] = [
   { id: "field-2", name: "Company", type: "text", isRequired: false },
 ];
 
-const defaultPhotoAlbums: PhotoAlbum[] = [
+export const defaultPhotoAlbums: PhotoAlbum[] = [
   { id: "album-me", name: "Me", photos: [] },
   { id: "album-general", name: "General", photos: [] },
   { id: "album-friends", name: "Friends", photos: [] },
@@ -84,6 +85,10 @@ const defaultPhotoAlbums: PhotoAlbum[] = [
 export const PeopleProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [people, setPeople] = useState<Person[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>(defaultCustomFields);
+  const [defaultAlbums, setDefaultAlbums] = useState<PhotoAlbum[]>(() => {
+    const savedAlbums = localStorage.getItem('defaultPhotoAlbums');
+    return savedAlbums ? JSON.parse(savedAlbums) : defaultPhotoAlbums;
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -94,17 +99,14 @@ export const PeopleProvider: React.FC<{children: React.ReactNode}> = ({ children
       if (savedPeople) {
         const parsedPeople = JSON.parse(savedPeople);
         const migratedPeople = parsedPeople.map((person: Person) => {
-          // Initialize photoAlbums if it doesn't exist
           if (!person.photoAlbums) {
             person.photoAlbums = JSON.parse(JSON.stringify(defaultPhotoAlbums));
           }
           
-          // Migrate photos to photoDetails if needed
           if (!person.photoDetails && (person.photos || person.photo)) {
             const photos = person.photos || (person.photo ? [person.photo] : []);
             person.photoDetails = photos.map(url => ({ url, description: '' }));
             
-            // Add existing photos to the "General" album if they're not already in albums
             if (person.photoDetails && person.photoDetails.length > 0) {
               const generalAlbum = person.photoAlbums.find(album => album.id === "album-general");
               if (generalAlbum && generalAlbum.photos.length === 0) {
@@ -157,6 +159,19 @@ export const PeopleProvider: React.FC<{children: React.ReactNode}> = ({ children
     }
   }, [customFields]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('defaultPhotoAlbums', JSON.stringify(defaultAlbums));
+    } catch (error) {
+      console.error('Error saving defaultAlbums to localStorage:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save default albums",
+        variant: "destructive",
+      });
+    }
+  }, [defaultAlbums]);
+
   const addPerson = (personData: Omit<Person, 'id' | 'createdAt' | 'updatedAt'>) => {
     const id = `person-${Date.now()}`;
     const now = new Date().toISOString();
@@ -171,10 +186,8 @@ export const PeopleProvider: React.FC<{children: React.ReactNode}> = ({ children
       photoDetails = [{ url: personData.photo, description: '' }];
     }
     
-    // Initialize photoAlbums with default albums
     const photoAlbums = personData.photoAlbums || JSON.parse(JSON.stringify(defaultPhotoAlbums));
     
-    // Add the profile photo to the "Me" album if it exists
     if (photoDetails.length > 0 && personData.photo) {
       const meAlbum = photoAlbums.find(album => album.id === "album-me");
       if (meAlbum) {
@@ -449,20 +462,71 @@ export const PeopleProvider: React.FC<{children: React.ReactNode}> = ({ children
   };
   
   const renamePhotoAlbum = (personId: string, albumId: string, newName: string) => {
+    const isDefaultAlbum = defaultAlbums.some(album => album.id === albumId);
+    
+    if (isDefaultAlbum) {
+      setDefaultAlbums(prev => 
+        prev.map(album => 
+          album.id === albumId ? { ...album, name: newName } : album
+        )
+      );
+      
+      setPeople(prevPeople => 
+        prevPeople.map(person => ({
+          ...person,
+          photoAlbums: person.photoAlbums.map(album => 
+            album.id === albumId ? { ...album, name: newName } : album
+          ),
+          updatedAt: new Date().toISOString()
+        }))
+      );
+    } else {
+      setPeople(prevPeople => 
+        prevPeople.map(person => {
+          if (person.id === personId) {
+            return {
+              ...person,
+              photoAlbums: person.photoAlbums.map(album => 
+                album.id === albumId ? { ...album, name: newName } : album
+              ),
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return person;
+        })
+      );
+    }
+    
+    toast({
+      title: "Success",
+      description: "Album renamed successfully",
+    });
+  };
+
+  const addDefaultAlbum = (albumName: string) => {
+    const albumId = `album-${Date.now()}`;
+    
+    const newAlbum: PhotoAlbum = { id: albumId, name: albumName, photos: [] };
+    setDefaultAlbums(prev => [...prev, newAlbum]);
+    
     setPeople(prevPeople => 
-      prevPeople.map(person => {
-        if (person.id === personId) {
-          return {
-            ...person,
-            photoAlbums: person.photoAlbums.map(album => 
-              album.id === albumId ? { ...album, name: newName } : album
-            ),
-            updatedAt: new Date().toISOString()
-          };
-        }
-        return person;
-      })
+      prevPeople.map(person => ({
+        ...person,
+        photoAlbums: [...person.photoAlbums, { ...newAlbum }],
+        updatedAt: new Date().toISOString()
+      }))
     );
+    
+    toast({
+      title: "Success",
+      description: "Default album added successfully",
+    });
+    
+    return albumId;
+  };
+  
+  const getDefaultAlbums = () => {
+    return defaultAlbums;
   };
 
   const addPhotoToGallery = (personId: string, photoBase64: string, description: string, albumId?: string) => {
@@ -471,12 +535,10 @@ export const PeopleProvider: React.FC<{children: React.ReactNode}> = ({ children
     setPeople(prevPeople => 
       prevPeople.map(person => {
         if (person.id === personId) {
-          // Update main photoDetails array
           const updatedPhotoDetails = person.photoDetails 
             ? [...person.photoDetails, newPhoto] 
             : [newPhoto];
           
-          // If albumId is provided, add to that album
           let updatedPhotoAlbums = [...person.photoAlbums];
           if (albumId) {
             updatedPhotoAlbums = updatedPhotoAlbums.map(album => 
@@ -485,7 +547,6 @@ export const PeopleProvider: React.FC<{children: React.ReactNode}> = ({ children
                 : album
             );
           } else {
-            // Default to "General" album if no album specified
             const generalAlbum = updatedPhotoAlbums.find(album => album.id === "album-general");
             if (generalAlbum) {
               const generalAlbumIndex = updatedPhotoAlbums.findIndex(album => album.id === "album-general");
@@ -518,7 +579,6 @@ export const PeopleProvider: React.FC<{children: React.ReactNode}> = ({ children
       prevPeople.map(person => {
         if (person.id === personId) {
           if (albumId) {
-            // Remove from specific album
             const updatedPhotoAlbums = person.photoAlbums.map(album => {
               if (album.id === albumId && album.photos.length > photoIndex) {
                 const updatedPhotos = [...album.photos];
@@ -534,14 +594,12 @@ export const PeopleProvider: React.FC<{children: React.ReactNode}> = ({ children
               updatedAt: new Date().toISOString()
             };
           } else {
-            // Remove from main photoDetails
             if (person.photoDetails) {
               const updatedPhotoDetails = [...person.photoDetails];
               if (photoIndex < updatedPhotoDetails.length) {
                 const photoUrl = updatedPhotoDetails[photoIndex].url;
                 updatedPhotoDetails.splice(photoIndex, 1);
                 
-                // Also remove from all albums
                 const updatedPhotoAlbums = person.photoAlbums.map(album => {
                   const photoIndexInAlbum = album.photos.findIndex(p => p.url === photoUrl);
                   if (photoIndexInAlbum !== -1) {
@@ -578,7 +636,6 @@ export const PeopleProvider: React.FC<{children: React.ReactNode}> = ({ children
       prevPeople.map(person => {
         if (person.id === personId) {
           if (albumId) {
-            // Update in specific album
             const updatedPhotoAlbums = person.photoAlbums.map(album => {
               if (album.id === albumId && album.photos.length > photoIndex) {
                 const updatedPhotos = [...album.photos];
@@ -597,7 +654,6 @@ export const PeopleProvider: React.FC<{children: React.ReactNode}> = ({ children
               updatedAt: new Date().toISOString()
             };
           } else if (person.photoDetails && person.photoDetails[photoIndex]) {
-            // Update in main photoDetails
             const updatedPhotoDetails = [...person.photoDetails];
             const photoUrl = updatedPhotoDetails[photoIndex].url;
             updatedPhotoDetails[photoIndex] = {
@@ -605,7 +661,6 @@ export const PeopleProvider: React.FC<{children: React.ReactNode}> = ({ children
               description
             };
             
-            // Also update in all albums containing this photo
             const updatedPhotoAlbums = person.photoAlbums.map(album => {
               const photoIndexInAlbum = album.photos.findIndex(p => p.url === photoUrl);
               if (photoIndexInAlbum !== -1) {
@@ -652,7 +707,9 @@ export const PeopleProvider: React.FC<{children: React.ReactNode}> = ({ children
         updatePhotoDescription,
         addPhotoAlbum,
         removePhotoAlbum,
-        renamePhotoAlbum
+        renamePhotoAlbum,
+        addDefaultAlbum,
+        getDefaultAlbums
       }}
     >
       {children}

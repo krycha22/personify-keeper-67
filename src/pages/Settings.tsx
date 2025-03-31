@@ -10,20 +10,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useFieldRequirements } from '@/context/FieldRequirementsContext';
-import { usePeople } from '@/context/PeopleContext';
+import { usePeople, defaultPhotoAlbums } from '@/context/PeopleContext';
 import CustomFieldForm from '@/components/settings/CustomFieldForm';
 import CustomFieldsList from '@/components/settings/CustomFieldsList';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { MoonIcon, SunIcon, Trash2, Download, Globe, Users, Plus, X } from 'lucide-react';
+import { MoonIcon, SunIcon, Trash2, Download, Globe, Users, Plus, X, GalleryHorizontal, Pencil } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
   const { fieldRequirements, updateFieldRequirement, resetFieldRequirements } = useFieldRequirements();
-  const { people, customFields, addCustomField, deleteCustomField } = usePeople();
+  const { people, customFields, addCustomField, deleteCustomField, addDefaultAlbum, getDefaultAlbums } = usePeople();
   const { toast } = useToast();
   const [customRelationshipType, setCustomRelationshipType] = useState('');
+  const [newDefaultAlbumName, setNewDefaultAlbumName] = useState('');
+  const [isNewDefaultAlbumOpen, setIsNewDefaultAlbumOpen] = useState(false);
   const [relationshipTypes, setRelationshipTypes] = useState<string[]>(() => {
     const savedTypes = localStorage.getItem('relationshipTypes');
     return savedTypes ? JSON.parse(savedTypes) : [
@@ -124,6 +127,14 @@ const Settings = () => {
       title: t('toast.success'),
       description: t('settings.relationshipTypeRemoved'),
     });
+  };
+
+  const handleAddDefaultAlbum = () => {
+    if (!newDefaultAlbumName.trim()) return;
+    
+    addDefaultAlbum(newDefaultAlbumName.trim());
+    setNewDefaultAlbumName('');
+    setIsNewDefaultAlbumOpen(false);
   };
 
   return (
@@ -306,6 +317,62 @@ const Settings = () => {
                 {t('settings.resetToDefaults')}
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <GalleryHorizontal className="h-5 w-5" />
+              {t('settings.defaultPhotoAlbums')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground mb-2">
+              {t('settings.defaultPhotoAlbumsDescription')}
+            </p>
+            
+            <div className="flex flex-wrap gap-2 mb-4">
+              {getDefaultAlbums().map(album => (
+                <Badge key={album.id} variant="outline" className="flex items-center gap-1 px-3 py-1.5">
+                  {album.name}
+                </Badge>
+              ))}
+            </div>
+            
+            <Dialog open={isNewDefaultAlbumOpen} onOpenChange={setIsNewDefaultAlbumOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('settings.addDefaultAlbum')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t('settings.addNewDefaultAlbum')}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <label htmlFor="default-album-name" className="text-sm font-medium">
+                      {t('settings.albumName')}
+                    </label>
+                    <Input
+                      id="default-album-name"
+                      value={newDefaultAlbumName}
+                      onChange={(e) => setNewDefaultAlbumName(e.target.value)}
+                      placeholder={t('settings.enterAlbumName')}
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleAddDefaultAlbum}
+                    disabled={!newDefaultAlbumName.trim()}
+                    className="w-full"
+                  >
+                    {t('settings.createAlbum')}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
 

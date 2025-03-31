@@ -60,7 +60,7 @@ export const defaultPhotoAlbums: PhotoAlbum[] = [
 interface PeopleContextType {
   people: Person[];
   customFields: CustomField[];
-  addPerson: (person: Omit<Person, 'id'>) => Person;
+  addPerson: (person: Omit<Person, 'id'>) => Promise<Person>;
   updatePerson: (id: string, personData: Partial<Person>) => void;
   deletePerson: (id: string) => void;
   getPerson: (id: string) => Person | undefined;
@@ -73,7 +73,7 @@ interface PeopleContextType {
   addPhotoToGallery: (personId: string, photo: string, description: string, albumId?: string) => void;
   removePhotoFromGallery: (personId: string, photoIndex: number, albumId?: string) => void;
   updatePhotoDescription: (personId: string, photoIndex: number, description: string, albumId?: string) => void;
-  addPhotoAlbum: (personId: string, albumName: string) => string;
+  addPhotoAlbum: (personId: string, albumName: string) => Promise<string>;
   removePhotoAlbum: (personId: string, albumId: string) => void;
   renamePhotoAlbum: (personId: string, albumId: string, newName: string) => void;
   addRelationship: (personId: string, relatedPersonId: string, relationshipType: string) => void;
@@ -111,26 +111,36 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return;
         }
         
-        const transformedPeople = data.map(person => ({
-          id: person.id,
-          firstName: person.first_name,
-          lastName: person.last_name,
-          email: person.email,
-          phone: person.phone,
-          address: person.address,
-          birthDate: person.birth_date,
-          notes: person.notes,
-          nickname: person.nickname,
-          isHidden: person.is_hidden,
-          photo: person.photo,
-          photoDetails: [],
-          photoAlbums: person.photo_albums || defaultPhotoAlbums,
-          customFields: person.custom_fields || {},
-          relationships: person.relationships || [],
-          tags: person.tags || []
-        }));
-        
-        setPeople(transformedPeople);
+        if (data) {
+          const transformedPeople: Person[] = data.map(person => ({
+            id: person.id,
+            firstName: person.first_name,
+            lastName: person.last_name,
+            email: person.email,
+            phone: person.phone,
+            address: person.address,
+            birthDate: person.birth_date,
+            notes: person.notes,
+            nickname: person.nickname,
+            isHidden: person.is_hidden,
+            photo: person.photo,
+            photoDetails: [],
+            photoAlbums: Array.isArray(person.photo_albums) 
+              ? person.photo_albums 
+              : defaultPhotoAlbums,
+            customFields: typeof person.custom_fields === 'object' 
+              ? person.custom_fields 
+              : {},
+            relationships: Array.isArray(person.relationships) 
+              ? person.relationships 
+              : [],
+            tags: Array.isArray(person.tags) 
+              ? person.tags 
+              : []
+          }));
+          
+          setPeople(transformedPeople);
+        }
       } catch (error) {
         console.error("Failed to fetch people:", error);
         toast.error("Could not connect to database");
@@ -199,7 +209,7 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     fetchDefaultAlbums();
   }, []);
 
-  const addPerson = async (personData: Omit<Person, 'id'>) => {
+  const addPerson = async (personData: Omit<Person, 'id'>): Promise<Person> => {
     try {
       const supabaseData = {
         first_name: personData.firstName,
@@ -255,10 +265,18 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isHidden: data.is_hidden,
         photo: data.photo,
         photoDetails: [],
-        photoAlbums: data.photo_albums || defaultPhotoAlbums,
-        customFields: data.custom_fields || {},
-        relationships: data.relationships || [],
-        tags: data.tags || []
+        photoAlbums: Array.isArray(data.photo_albums) 
+          ? data.photo_albums 
+          : defaultPhotoAlbums,
+        customFields: typeof data.custom_fields === 'object' 
+          ? data.custom_fields 
+          : {},
+        relationships: Array.isArray(data.relationships) 
+          ? data.relationships 
+          : [],
+        tags: Array.isArray(data.tags) 
+          ? data.tags 
+          : []
       };
       
       setPeople((prev) => [...prev, newPerson]);
@@ -609,7 +627,7 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  const addPhotoAlbum = async (personId: string, albumName: string) => {
+  const addPhotoAlbum = async (personId: string, albumName: string): Promise<string> => {
     const person = people.find(p => p.id === personId);
     if (!person) return '';
     

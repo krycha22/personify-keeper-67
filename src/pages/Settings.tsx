@@ -5,9 +5,11 @@ import Layout from '@/components/layout/Layout';
 import CustomFieldsList from '@/components/settings/CustomFieldsList';
 import CustomFieldForm from '@/components/settings/CustomFieldForm';
 import { useAuth } from '@/context/AuthContext';
+import { usePeople } from '@/context/PeopleContext';
 
 const Settings = () => {
   const { isAuthenticated } = useAuth();
+  const { customFields, addCustomField, deleteCustomField } = usePeople();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,10 +30,15 @@ const Settings = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-6">
-            <CustomFieldsList />
+            <CustomFieldsList 
+              fields={customFields} 
+              onDelete={deleteCustomField} 
+            />
           </div>
           <div className="space-y-6">
-            <CustomFieldForm />
+            <CustomFieldForm 
+              onAddField={addCustomField} 
+            />
           </div>
         </div>
       </div>

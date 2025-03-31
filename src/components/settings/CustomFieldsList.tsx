@@ -8,6 +8,7 @@ import { CustomField } from "@/context/PeopleContext";
 import { useLanguage } from '@/context/LanguageContext';
 import { Trash2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
 
 interface CustomFieldsListProps {
   fields: CustomField[];
@@ -16,6 +17,7 @@ interface CustomFieldsListProps {
 
 const CustomFieldsList: React.FC<CustomFieldsListProps> = ({ fields, onDelete }) => {
   const { t } = useLanguage();
+  const { toast } = useToast();
   
   if (fields.length === 0) {
     return (
@@ -38,6 +40,18 @@ const CustomFieldsList: React.FC<CustomFieldsListProps> = ({ fields, onDelete })
       default:
         return type;
     }
+  };
+
+  // Helper function to safely format strings with replacements
+  const safeFormat = (key: string, replacements?: Record<string, string>) => {
+    const translatedText = t(key);
+    if (!translatedText) return key; // Fallback to key if translation is missing
+    
+    if (!replacements) return translatedText;
+    
+    return Object.entries(replacements).reduce((result, [placeholder, value]) => {
+      return result.replace(new RegExp(`{${placeholder}}`, 'g'), value || '');
+    }, translatedText);
   };
 
   return (
@@ -80,7 +94,7 @@ const CustomFieldsList: React.FC<CustomFieldsListProps> = ({ fields, onDelete })
                       <AlertDialogHeader>
                         <AlertDialogTitle>{t('customFields.deleteConfirmation')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          {t('customFields.deleteConfirmationDescription').replace('{field}', field.name)}
+                          {safeFormat('customFields.deleteConfirmationDescription', { field: field.name })}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>

@@ -11,6 +11,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useFieldRequirements } from '@/context/FieldRequirementsContext';
 import CustomFieldInput from '@/components/people/CustomFieldInput';
 import ImageUpload from '@/components/people/ImageUpload';
+import RelationshipManager from '@/components/people/RelationshipManager';
 import { SaveIcon, ArrowLeft } from 'lucide-react';
 
 const defaultPhotoAlbums: PhotoAlbum[] = [
@@ -306,6 +307,12 @@ const PersonForm = () => {
                     ))}
                   </div>
                 </CardContent>
+              </Card>
+            )}
+
+            {isEditMode && existingPerson && (
+              <Card className="md:col-span-3">
+                <RelationshipManager person={existingPerson} />
               </Card>
             )}
 

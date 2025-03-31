@@ -1,74 +1,69 @@
 
 import React from 'react';
+import { CustomField } from '@/context/PeopleContext';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CustomField } from "@/context/PeopleContext";
-import { cn } from "@/lib/utils";
+import { useLanguage } from '@/context/LanguageContext';
 
 interface CustomFieldInputProps {
   field: CustomField;
   value: any;
   onChange: (value: any) => void;
-  className?: string;
 }
 
-const CustomFieldInput: React.FC<CustomFieldInputProps> = ({
-  field,
-  value,
-  onChange,
-  className,
-}) => {
-  const renderField = () => {
+const CustomFieldInput: React.FC<CustomFieldInputProps> = ({ field, value, onChange }) => {
+  const { t } = useLanguage();
+  
+  // Handle null/undefined values
+  const safeValue = value !== undefined && value !== null ? value : (field.type === 'boolean' ? false : '');
+  
+  const renderInput = () => {
     switch (field.type) {
       case 'text':
         return (
           <Input
-            id={field.id}
+            id={`field-${field.id}`}
             type="text"
-            value={value || ''}
+            value={safeValue}
             onChange={(e) => onChange(e.target.value)}
-            required={field.isRequired}
+            required={field.required}
           />
+        );
+      case 'number':
+        return (
+          <Input
+            id={`field-${field.id}`}
+            type="number"
+            value={safeValue}
+            onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+            required={field.required}
+          />
+        );
+      case 'boolean':
+        return (
+          <div className="flex items-center space-x-2">
+            <Switch
+              id={`field-${field.id}`}
+              checked={!!safeValue}
+              onCheckedChange={onChange}
+            />
+            <Label htmlFor={`field-${field.id}`} className="cursor-pointer">
+              {safeValue ? t('common.yes') : t('common.no')}
+            </Label>
+          </div>
         );
       case 'date':
         return (
           <Input
-            id={field.id}
+            id={`field-${field.id}`}
             type="date"
-            value={value || ''}
+            value={safeValue}
             onChange={(e) => onChange(e.target.value)}
-            required={field.isRequired}
+            required={field.required}
           />
-        );
-      case 'checkbox':
-        return (
-          <Checkbox
-            id={field.id}
-            checked={value || false}
-            onCheckedChange={onChange}
-            required={field.isRequired}
-          />
-        );
-      case 'select':
-        return (
-          <Select
-            value={value || ''}
-            onValueChange={onChange}
-            required={field.isRequired}
-          >
-            <SelectTrigger id={field.id}>
-              <SelectValue placeholder="Select an option" />
-            </SelectTrigger>
-            <SelectContent>
-              {field.options?.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              )) || []}
-            </SelectContent>
-          </Select>
         );
       default:
         return null;
@@ -76,12 +71,12 @@ const CustomFieldInput: React.FC<CustomFieldInputProps> = ({
   };
 
   return (
-    <div className={cn("space-y-2", className)}>
-      <Label htmlFor={field.id} className="flex items-center space-x-2">
-        <span>{field.name}</span>
-        {field.isRequired && <span className="text-destructive">*</span>}
+    <div className="space-y-2">
+      <Label htmlFor={`field-${field.id}`}>
+        {field.name}
+        {field.required && <span className="text-destructive ml-1">*</span>}
       </Label>
-      {renderField()}
+      {renderInput()}
     </div>
   );
 };

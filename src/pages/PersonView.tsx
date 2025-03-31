@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -161,9 +162,9 @@ const PersonView = () => {
               <CardTitle>{t('fields.additionalInfo')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(person.customFields).length > 0 ? (
+              {Object.entries(person.customFields || {}).length > 0 ? (
                 <div className="space-y-4">
-                  {Object.entries(person.customFields).map(([fieldId, value]) => {
+                  {Object.entries(person.customFields || {}).map(([fieldId, value]) => {
                     const field = usePeople().customFields.find(f => f.id === fieldId);
                     if (!field || value === undefined || value === '') return null;
                     
@@ -175,7 +176,7 @@ const PersonView = () => {
                             {field.name}
                           </p>
                           <p>
-                            {field.type === 'checkbox' 
+                            {field.type === 'boolean' 
                               ? (value ? t('common.yes') : t('common.no'))
                               : String(value)
                             }

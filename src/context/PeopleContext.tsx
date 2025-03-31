@@ -1,6 +1,15 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+
+export interface Photo {
+  url: string;
+  description: string;
+}
+
+export interface Relationship {
+  relatedPersonId: string;
+  type: string;
+}
 
 export interface Person {
   id: string;
@@ -9,14 +18,16 @@ export interface Person {
   email?: string;
   phone?: string;
   address?: string;
-  birthdate?: string;
+  birthDate?: string;
   notes?: string;
   nickname?: string;
   tags?: string[];
   isHidden?: boolean;
   photo?: string;
-  photoDetails?: {url: string, description: string}[];
+  photoDetails?: Photo[];
   photoAlbums: PhotoAlbum[];
+  customFields: Record<string, any>;
+  relationships: Relationship[];
   [key: string]: any;
 }
 
@@ -25,19 +36,19 @@ export interface CustomField {
   name: string;
   type: 'text' | 'number' | 'date' | 'boolean';
   required?: boolean;
+  options?: string[];
 }
 
 export interface PhotoAlbum {
   id: string;
   name: string;
-  photos: {url: string, description: string}[];
+  photos: Photo[];
 }
 
 export const defaultPhotoAlbums: PhotoAlbum[] = [
-  { id: '1', name: 'Family', photos: [] },
-  { id: '2', name: 'Friends', photos: [] },
-  { id: '3', name: 'Work', photos: [] },
-  { id: '4', name: 'Vacation', photos: [] }
+  { id: 'album-me', name: 'Me', photos: [] },
+  { id: 'album-general', name: 'General', photos: [] },
+  { id: 'album-friends', name: 'Friends', photos: [] }
 ];
 
 interface PeopleContextType {
@@ -59,6 +70,8 @@ interface PeopleContextType {
   addPhotoAlbum: (personId: string, albumName: string) => string;
   removePhotoAlbum: (personId: string, albumId: string) => void;
   renamePhotoAlbum: (personId: string, albumId: string, newName: string) => void;
+  addRelationship: (personId: string, relatedPersonId: string, relationshipType: string) => void;
+  removeRelationship: (personId: string, relatedPersonId: string) => void;
 }
 
 const PeopleContext = createContext<PeopleContextType | undefined>(undefined);
@@ -96,7 +109,6 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, []);
 
-  // Save changes to localStorage
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(people));
   }, [people]);
@@ -116,12 +128,8 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       firstName: personData.firstName,
       lastName: personData.lastName,
       isHidden: false,
-      // Ensure photoAlbums is initialized
-      photoAlbums: personData.photoAlbums || [
-        { id: "album-me", name: "Me", photos: [] },
-        { id: "album-general", name: "General", photos: [] },
-        { id: "album-friends", name: "Friends", photos: [] },
-      ]
+      photoAlbums: personData.photoAlbums || JSON.parse(JSON.stringify(defaultPhotoAlbums)),
+      relationships: personData.relationships || []
     };
     setPeople((prev) => [...prev, newPerson]);
     return newPerson;
@@ -152,7 +160,6 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const searchPeople = (query: string) => {
-    // First, filter out hidden profiles if user is not admin
     const visiblePeople = isAdmin() ? people : people.filter(person => !person.isHidden);
     
     if (!query) {
@@ -204,13 +211,11 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return defaultAlbums;
   };
 
-  // Photo Gallery Functions
   const addPhotoToGallery = (personId: string, photoUrl: string, description: string, albumId?: string) => {
     setPeople(prev => prev.map(person => {
       if (person.id !== personId) return person;
 
       if (albumId) {
-        // Add to a specific album
         const updatedAlbums = person.photoAlbums.map(album => {
           if (album.id === albumId) {
             return {
@@ -226,7 +231,6 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           photoAlbums: updatedAlbums
         };
       } else {
-        // Add to general album if no album specified
         const updatedAlbums = person.photoAlbums.map(album => {
           if (album.id === "album-general") {
             return {
@@ -250,7 +254,6 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (person.id !== personId) return person;
 
       if (albumId) {
-        // Remove from a specific album
         const updatedAlbums = person.photoAlbums.map(album => {
           if (album.id === albumId) {
             return {
@@ -266,7 +269,6 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           photoAlbums: updatedAlbums
         };
       } else {
-        // Remove from photoDetails (legacy storage)
         const updatedPhotoDetails = (person.photoDetails || []).filter((_, index) => index !== photoIndex);
         
         return {
@@ -282,7 +284,6 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (person.id !== personId) return person;
 
       if (albumId) {
-        // Update in a specific album
         const updatedAlbums = person.photoAlbums.map(album => {
           if (album.id === albumId) {
             const updatedPhotos = [...album.photos];
@@ -306,7 +307,6 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           photoAlbums: updatedAlbums
         };
       } else {
-        // Update in photoDetails (legacy storage)
         const updatedPhotoDetails = [...(person.photoDetails || [])];
         if (updatedPhotoDetails[photoIndex]) {
           updatedPhotoDetails[photoIndex] = {
@@ -365,6 +365,39 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }));
   };
 
+  const addRelationship = (personId: string, relatedPersonId: string, relationshipType: string) => {
+    setPeople(prev => prev.map(person => {
+      if (person.id !== personId) return person;
+      
+      const relationshipExists = person.relationships.some(
+        rel => rel.relatedPersonId === relatedPersonId
+      );
+      
+      if (relationshipExists) return person;
+
+      const newRelationship: Relationship = {
+        relatedPersonId,
+        type: relationshipType
+      };
+      
+      return {
+        ...person,
+        relationships: [...person.relationships, newRelationship]
+      };
+    }));
+  };
+
+  const removeRelationship = (personId: string, relatedPersonId: string) => {
+    setPeople(prev => prev.map(person => {
+      if (person.id !== personId) return person;
+      
+      return {
+        ...person,
+        relationships: person.relationships.filter(rel => rel.relatedPersonId !== relatedPersonId)
+      };
+    }));
+  };
+
   const generateId = () => {
     return Math.random().toString(36).substring(2, 15) + 
            Math.random().toString(36).substring(2, 15);
@@ -390,7 +423,9 @@ export const PeopleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updatePhotoDescription,
         addPhotoAlbum,
         removePhotoAlbum,
-        renamePhotoAlbum
+        renamePhotoAlbum,
+        addRelationship,
+        removeRelationship
       }}
     >
       {children}

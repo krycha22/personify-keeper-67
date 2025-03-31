@@ -7,26 +7,12 @@ import { usePeople } from '@/context/PeopleContext';
 import PersonCard from '@/components/people/PersonCard';
 import SearchBar from '@/components/people/SearchBar';
 import { UserPlus, Users } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
 
 const People = () => {
-  const { people, searchPeople, deletePerson, togglePersonVisibility } = usePeople();
-  const { user } = useAuth();
+  const { people, searchPeople, deletePerson } = usePeople();
   const [searchResults, setSearchResults] = useState(people);
   const location = useLocation();
   const navigate = useNavigate();
-  
-  // Przekieruj do strony logowania, jeśli użytkownik nie jest zalogowany
-  useEffect(() => {
-    if (!user) {
-      navigate('/login');
-    }
-  }, [user, navigate]);
-
-  // Jeśli użytkownik nie jest zalogowany, nie renderuj zawartości strony
-  if (!user) {
-    return null;
-  }
   
   // Get search query from URL
   const queryParams = new URLSearchParams(location.search);
@@ -80,7 +66,6 @@ const People = () => {
                 key={person.id}
                 person={person}
                 onDelete={handleDelete}
-                onToggleVisibility={togglePersonVisibility}
               />
             ))}
           </div>

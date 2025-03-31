@@ -34,10 +34,7 @@ const CustomFieldsList: React.FC<CustomFieldsListProps> = ({ fields, onDelete })
       case 'date':
         return 'Date Picker';
       case 'checkbox':
-      case 'boolean':
         return 'Checkbox';
-      case 'number':
-        return 'Number Input';
       case 'select':
         return 'Dropdown';
       default:
@@ -80,7 +77,7 @@ const CustomFieldsList: React.FC<CustomFieldsListProps> = ({ fields, onDelete })
                   <Badge variant="outline">{getTypeLabel(field.type)}</Badge>
                 </TableCell>
                 <TableCell>
-                  {field.required ? (
+                  {field.isRequired ? (
                     <Badge variant="default">{t('fields.required')}</Badge>
                   ) : (
                     <Badge variant="outline">{t('fields.optional')}</Badge>

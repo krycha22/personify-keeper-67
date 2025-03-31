@@ -29,7 +29,7 @@ const CustomFieldInput: React.FC<CustomFieldInputProps> = ({
             type="text"
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
-            required={field.required}
+            required={field.isRequired}
           />
         );
       case 'date':
@@ -39,7 +39,7 @@ const CustomFieldInput: React.FC<CustomFieldInputProps> = ({
             type="date"
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
-            required={field.required}
+            required={field.isRequired}
           />
         );
       case 'checkbox':
@@ -48,7 +48,7 @@ const CustomFieldInput: React.FC<CustomFieldInputProps> = ({
             id={field.id}
             checked={value || false}
             onCheckedChange={onChange}
-            required={field.required}
+            required={field.isRequired}
           />
         );
       case 'select':
@@ -56,7 +56,7 @@ const CustomFieldInput: React.FC<CustomFieldInputProps> = ({
           <Select
             value={value || ''}
             onValueChange={onChange}
-            required={field.required}
+            required={field.isRequired}
           >
             <SelectTrigger id={field.id}>
               <SelectValue placeholder="Select an option" />
@@ -70,25 +70,6 @@ const CustomFieldInput: React.FC<CustomFieldInputProps> = ({
             </SelectContent>
           </Select>
         );
-      case 'number':
-        return (
-          <Input
-            id={field.id}
-            type="number"
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            required={field.required}
-          />
-        );
-      case 'boolean':
-        return (
-          <Checkbox
-            id={field.id}
-            checked={value === 'true' || value === true}
-            onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
-            required={field.required}
-          />
-        );
       default:
         return null;
     }
@@ -98,7 +79,7 @@ const CustomFieldInput: React.FC<CustomFieldInputProps> = ({
     <div className={cn("space-y-2", className)}>
       <Label htmlFor={field.id} className="flex items-center space-x-2">
         <span>{field.name}</span>
-        {field.required && <span className="text-destructive">*</span>}
+        {field.isRequired && <span className="text-destructive">*</span>}
       </Label>
       {renderField()}
     </div>

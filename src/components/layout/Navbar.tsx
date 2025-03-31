@@ -2,11 +2,13 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { MoonIcon, SunIcon, User, Users, Settings } from "lucide-react";
+import { MoonIcon, SunIcon, User, Users, Settings, LogOut, ShieldAlert } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from '@/context/AuthContext';
 
 const Navbar: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
+  const { user, logout, isAdmin } = useAuth();
   const location = useLocation();
   
   const isActive = (path: string) => {
@@ -41,6 +43,16 @@ const Navbar: React.FC = () => {
               Settings
             </Button>
           </Link>
+          
+          {isAdmin() && (
+            <Link to="/admin">
+              <Button variant="ghost" className={isActive('/admin')}>
+                <ShieldAlert className="mr-2 h-4 w-4" />
+                Admin
+              </Button>
+            </Link>
+          )}
+          
           <Button variant="ghost" size="icon" onClick={toggleTheme}>
             {theme === 'light' ? (
               <SunIcon className="h-5 w-5" />
@@ -48,6 +60,13 @@ const Navbar: React.FC = () => {
               <MoonIcon className="h-5 w-5" />
             )}
           </Button>
+          
+          {user && (
+            <Button variant="outline" onClick={logout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
+          )}
         </div>
       </div>
     </nav>
